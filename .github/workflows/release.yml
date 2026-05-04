@@ -24,7 +24,7 @@ jobs:
           python3 scripts/release_checksums.py
           python3 scripts/check_skill.py
       - name: Upload release artifacts
-        uses: softprops/action-gh-release@a06a81a
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
         with:
           files: |
             secure-webapp.skill
