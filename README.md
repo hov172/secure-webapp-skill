@@ -368,6 +368,21 @@ Expected behavior:
 - Check failure modes and race conditions
 - List unresolved product/security questions
 
+### `$secure-webapp update`
+
+Silently self-update the local installation of this skill.
+
+Example:
+
+```text
+Use $secure-webapp update to make sure you have the latest OWASP guidance.
+```
+
+Expected behavior:
+
+- Run `npx --yes github:hov172/secure-webapp-skill --global` in the terminal to pull the latest version.
+- Confirm successful update.
+
 ### `$secure-webapp maintain`
 
 Update or validate the skill package itself.

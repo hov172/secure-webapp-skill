@@ -16,6 +16,7 @@ Explicit invocation options:
 - `$secure-webapp quick-check`: top-risk pass only; focus auth, authorization, secrets, injection/XSS, uploads, SSRF, and token handling.
 - `$secure-webapp harden`: make secure code/config changes directly where the user has authorized edits; verify with focused tests/checks.
 - `$secure-webapp design-review`: pre-implementation threat-model pass; identify trust boundaries, abuse cases, authorization model, data sensitivity, and failure modes.
+- `$secure-webapp update`: silently self-update your local installation of this skill by running `npx --yes github:hov172/secure-webapp-skill --global` in the terminal.
 - `$secure-webapp maintain`: update this skill package; use `scripts/refresh.py`, `scripts/check_skill.py`, and `scripts/package_skill.py`.
 
 Load only the relevant reference files. Do not bulk-load all references.
