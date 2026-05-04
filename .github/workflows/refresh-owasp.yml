@@ -13,7 +13,7 @@ jobs:
   refresh:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+      - uses: actions/checkout@900f2210b1d28bbbd0bd22d17926b9e224e8f231
         with:
           persist-credentials: false
       - name: Refresh upstream OWASP material
@@ -30,7 +30,7 @@ jobs:
           python3 scripts/check_skill.py
       - name: Create refresh pull request
         id: cpr
-        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: refresh OWASP sources"
