@@ -18,7 +18,7 @@
 It is designed for AI workflows where security needs to be present by default, without turning every coding task into a long security lecture. The skill helps an agent notice risky patterns, choose safer implementations, and produce focused security review findings.
 
 ## Table of Contents
-- [Installation](#installation)
+- [Installation and Updating](#installation-and-updating)
 - [What This Skill Is For](#what-this-skill-is-for)
 - [What This Skill Is Not](#what-this-skill-is-not)
 - [Examples](#examples)
@@ -31,7 +31,7 @@ It is designed for AI workflows where security needs to be present by default, w
 - [License and Attribution](#license-and-attribution)
 - [Connect With Me](#-connect-with-me)
 
-## Installation
+## Installation and Updating
 
 The fastest way to install the skill is using `npx` *(requires [Node.js](https://nodejs.org/))* . This downloads and copies the required files directly into your agent's skill directory without leaving a cloned repository behind.
 
@@ -175,6 +175,18 @@ If the agent does not recognize the skill, check that the installed folder conta
 ```
 
 Avoid an extra nested folder such as `secure-webapp/secure-webapp/SKILL.md`.
+
+### Updating the Skill
+
+You can effortlessly self-update the local installation of this skill using your AI agent.
+
+Example:
+
+```text
+Use $secure-webapp update to make sure you have the latest OWASP guidance.
+```
+
+The skill will run `npx --yes github:hov172/secure-webapp-skill --global` in the terminal to pull and install the newest version automatically.
 
 ## What This Skill Is For
 
@@ -367,21 +379,6 @@ Expected behavior:
 - Flag sensitive data handling
 - Check failure modes and race conditions
 - List unresolved product/security questions
-
-### `$secure-webapp update`
-
-Silently self-update the local installation of this skill.
-
-Example:
-
-```text
-Use $secure-webapp update to make sure you have the latest OWASP guidance.
-```
-
-Expected behavior:
-
-- Run `npx --yes github:hov172/secure-webapp-skill --global` in the terminal to pull the latest version.
-- Confirm successful update.
 
 ### `$secure-webapp maintain`
 
