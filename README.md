@@ -45,7 +45,7 @@ This keeps token usage low during normal coding tasks while preserving deeper gu
 
 ## Installation
 
-The fastest way to install the skill is using `npx`. This downloads and copies the required files directly into your agent's skill directory without leaving a cloned repository behind.
+The fastest way to install the skill is using `npx` *(requires [Node.js](https://nodejs.org/))* . This downloads and copies the required files directly into your agent's skill directory without leaving a cloned repository behind.
 
 ### Quick Install via npx (Recommended)
 
