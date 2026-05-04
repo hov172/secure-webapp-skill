@@ -1,0 +1,31 @@
+name: Release skill
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0c366fd
+        with:
+          persist-credentials: false
+      - name: Build skill package
+        run: |
+          python3 -m py_compile scripts/refresh.py scripts/check_skill.py scripts/package_skill.py scripts/release_checksums.py scripts/sync_references.py
+          rm -rf scripts/__pycache__ _sources
+          python3 scripts/package_skill.py
+          python3 scripts/release_checksums.py
+          python3 scripts/check_skill.py
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@a06a81a
+        with:
+          files: |
+            secure-webapp.skill
+            SHA256SUMS

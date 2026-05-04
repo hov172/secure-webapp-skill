@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Secure Web App icon">
+  <rect width="512" height="512" rx="96" fill="#0F172A"/>
+  <circle cx="388" cy="124" r="44" fill="#F59E0B"/>
+  <path d="M256 64 408 132v108c0 101-61 174-152 208-91-34-152-107-152-208V132L256 64Z" fill="#2563EB"/>
+  <path d="M256 104 368 154v84c0 75-43 132-112 162-69-30-112-87-112-162v-84l112-50Z" fill="#FFFFFF"/>
+  <path d="M256 146 332 180v57c0 51-28 91-76 116-48-25-76-65-76-116v-57l76-34Z" fill="#10B981"/>
+  <path d="M226 252 251 277 302 216" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M112 382h288" stroke="#38BDF8" stroke-width="22" stroke-linecap="round"/>
+  <path d="M144 424h224" stroke="#F59E0B" stroke-width="18" stroke-linecap="round"/>
+</svg>

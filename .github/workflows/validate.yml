@@ -1,0 +1,22 @@
+name: Validate skill
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@0c366fd
+        with:
+          persist-credentials: false
+      - run: python3 -m py_compile scripts/refresh.py scripts/check_skill.py scripts/package_skill.py scripts/release_checksums.py scripts/sync_references.py
+      - run: python3 scripts/refresh.py --dry-run --quiet
+      - run: python3 scripts/package_skill.py
+      - run: python3 scripts/check_skill.py

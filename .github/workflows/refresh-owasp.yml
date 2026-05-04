@@ -1,0 +1,59 @@
+name: Refresh OWASP sources
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0c366fd
+        with:
+          persist-credentials: false
+      - name: Refresh upstream OWASP material
+        run: python3 scripts/refresh.py --quiet
+      - name: Sync curated references
+        run: python3 scripts/sync_references.py
+      - name: Build package and checksums
+        run: |
+          python3 scripts/package_skill.py
+          python3 scripts/release_checksums.py
+      - name: Validate refreshed source tree
+        run: |
+          rm -rf scripts/__pycache__
+          python3 scripts/check_skill.py
+      - name: Create refresh pull request
+        id: cpr
+        uses: peter-evans/create-pull-request@98357b1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: refresh OWASP sources"
+          title: "chore: refresh OWASP upstream sources"
+          body: |
+            Weekly automated refresh from upstream OWASP GitHub repositories.
+
+            This PR includes:
+            - refreshed `_sources/**`
+            - deterministic reference updates under `references/**`
+            - rebuilt `secure-webapp.skill`
+            - refreshed `SHA256SUMS`
+
+            The curated references are synced automatically from the refreshed OWASP cache.
+          branch: refresh/owasp-sources
+          delete-branch: true
+          add-paths: |
+            _sources/**
+            references/**
+            secure-webapp.skill
+            SHA256SUMS
+      - name: Auto-merge refresh pull request
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge "${{ steps.cpr.outputs.pull-request-number }}" --squash --delete-branch

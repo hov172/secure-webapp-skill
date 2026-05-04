@@ -1,0 +1,10 @@
+interface:
+  display_name: "Secure Web App"
+  short_description: "OWASP-guided web app security review"
+  icon_small: "./assets/secure-webapp-small.svg"
+  icon_large: "./assets/secure-webapp-large.svg"
+  brand_color: "#2563EB"
+  default_prompt: "Use $secure-webapp to review this web app code for security risks and suggest prioritized fixes."
+
+policy:
+  allow_implicit_invocation: true

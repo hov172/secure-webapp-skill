@@ -1,0 +1,28 @@
+secure-webapp skill attribution and license notes
+
+This skill contains original curated guidance that is informed by OWASP
+materials, including:
+
+- OWASP Top 10:2025
+  https://owasp.org/Top10/2025/
+  License: Creative Commons Attribution 3.0 Unported
+  https://creativecommons.org/licenses/by/3.0/
+
+- OWASP Application Security Verification Standard 5.0.0
+  https://owasp.org/www-project-application-security-verification-standard/
+  License: Creative Commons Attribution-ShareAlike 4.0 International
+  https://creativecommons.org/licenses/by-sa/4.0/
+
+- OWASP Cheat Sheet Series
+  https://cheatsheetseries.owasp.org/
+  License: Creative Commons Attribution 4.0 International
+  https://creativecommons.org/licenses/by/4.0/
+
+- OWASP Web Security Testing Guide
+  https://owasp.org/www-project-web-security-testing-guide/
+  https://github.com/OWASP/wstg
+  License: Creative Commons Attribution-ShareAlike 4.0 International
+  https://creativecommons.org/licenses/by-sa/4.0/
+
+OWASP and the OWASP project names are trademarks of the OWASP Foundation.
+This skill is not an official OWASP project unless explicitly published as one.
