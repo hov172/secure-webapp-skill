@@ -30,7 +30,7 @@ jobs:
           python3 scripts/check_skill.py
       - name: Create refresh pull request
         id: cpr
-        uses: peter-evans/create-pull-request@98357b1
+        uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: refresh OWASP sources"
