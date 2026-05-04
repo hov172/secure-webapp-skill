@@ -18,55 +18,18 @@
 It is designed for AI workflows where security needs to be present by default, without turning every coding task into a long security lecture. The skill helps an agent notice risky patterns, choose safer implementations, and produce focused security review findings.
 
 ## Table of Contents
+- [Installation](#installation)
 - [What This Skill Is For](#what-this-skill-is-for)
 - [What This Skill Is Not](#what-this-skill-is-not)
+- [Examples](#examples)
 - [How It Works](#how-it-works)
-- [Installation](#installation)
 - [Explicit Invocation Options](#explicit-invocation-options)
 - [Reference Files](#reference-files)
-- [Examples](#examples)
+- [Token Usage](#token-usage)
+- [Maintainer Guide](#maintainer-guide)
 - [OWASP Sources](#owasp-sources)
-- [Maintenance Workflow](#maintenance-workflow)
-
-## What This Skill Is For
-
-Use this skill when working on web application code or design that touches:
-
-- Authentication, signup, login, MFA, password reset, sessions, cookies, JWTs, OAuth, or OIDC
-- API endpoints, GraphQL, WebSockets, file uploads, file downloads, and pre-signed URLs
-- User input, forms, search, templates, DOM rendering, SQL/NoSQL queries, shell commands, or CSV exports
-- Authorization, roles, ownership checks, tenant isolation, IDOR, and admin functionality
-- CORS, CSP, CSRF, security headers, redirects, frontend storage, and browser security behavior
-- Secrets, `.env` files, debug mode, logging, error handling, production configuration, and dependency management
-- Secure design, threat modeling, supply-chain risk, exceptional conditions, and security audits
-
-The skill is stack-agnostic. It applies to frameworks such as Next.js, Express, Django, Flask, FastAPI, Rails, Spring, Laravel, Go services, and similar web stacks.
-
-## What This Skill Is Not
-
-This is not a penetration-testing agent and does not claim to exploit running systems. It is for:
-
-- Secure implementation
-- Static code review
-- Design review
-- Hardening recommendations
-- Focused remediation
-- OWASP-informed audit checklists
-
-> [!WARNING]
-> If dynamic testing or formal penetration testing is needed, this skill can help prepare scope and review code, but it should **not** replace a qualified security test.
-
-## How It Works
-
-The skill uses progressive disclosure:
-
-1. **Skill metadata** tells the agent when to trigger the skill.
-2. **`SKILL.md`** provides compact routing, behavior rules, and high-priority watchlist items.
-3. **Reference files** are loaded only when relevant to the task.
-4. **Audit checklist** is loaded only for review/audit/hardening workflows.
-5. **Maintenance scripts** refresh upstream OWASP source material, deterministically sync the curated references, validate the package, and build the `.skill` archive.
-
-This keeps token usage low during normal coding tasks while preserving deeper guidance for security-sensitive work.
+- [License and Attribution](#license-and-attribution)
+- [Connect With Me](#-connect-with-me)
 
 ## Installation
 
@@ -123,7 +86,7 @@ Use the **`.skill` archive** when you want a clean runtime artifact:
 secure-webapp.skill
 ```
 
-### Install for Claude: all projects
+#### Install for Claude: all projects
 
 Install the source folder globally for Claude-style clients:
 
@@ -141,7 +104,7 @@ unzip secure-webapp.skill -d ~/.claude/skills
 
 After installing, restart Claude or start a new session so the skill index is refreshed.
 
-### Install for Claude: one project
+#### Install for Claude: one project
 
 If your Claude client supports project-local skills, place the skill under the project:
 
@@ -159,7 +122,7 @@ unzip secure-webapp.skill -d /path/to/project/.claude/skills
 
 Use project-local installation when the skill should only affect one repository.
 
-### Install for Codex: all projects
+#### Install for Codex: all projects
 
 Install the source folder globally for Codex-style clients:
 
@@ -177,7 +140,7 @@ unzip secure-webapp.skill -d ~/.codex/skills
 
 After installing, restart Codex or start a new session so the skill index is refreshed.
 
-### Install for Codex: one project
+#### Install for Codex: one project
 
 If your Codex client supports project-local skills, place the skill under the project:
 
@@ -212,6 +175,119 @@ If the agent does not recognize the skill, check that the installed folder conta
 ```
 
 Avoid an extra nested folder such as `secure-webapp/secure-webapp/SKILL.md`.
+
+## What This Skill Is For
+
+Use this skill when working on web application code or design that touches:
+
+- Authentication, signup, login, MFA, password reset, sessions, cookies, JWTs, OAuth, or OIDC
+- API endpoints, GraphQL, WebSockets, file uploads, file downloads, and pre-signed URLs
+- User input, forms, search, templates, DOM rendering, SQL/NoSQL queries, shell commands, or CSV exports
+- Authorization, roles, ownership checks, tenant isolation, IDOR, and admin functionality
+- CORS, CSP, CSRF, security headers, redirects, frontend storage, and browser security behavior
+- Secrets, `.env` files, debug mode, logging, error handling, production configuration, and dependency management
+- Secure design, threat modeling, supply-chain risk, exceptional conditions, and security audits
+
+The skill is stack-agnostic. It applies to frameworks such as Next.js, Express, Django, Flask, FastAPI, Rails, Spring, Laravel, Go services, and similar web stacks.
+
+## What This Skill Is Not
+
+This is not a penetration-testing agent and does not claim to exploit running systems. It is for:
+
+- Secure implementation
+- Static code review
+- Design review
+- Hardening recommendations
+- Focused remediation
+- OWASP-informed audit checklists
+
+> [!WARNING]
+> If dynamic testing or formal penetration testing is needed, this skill can help prepare scope and review code, but it should **not** replace a qualified security test.
+
+## Examples
+
+### Secure Code Generation
+
+```text
+Use $secure-webapp to add a password reset flow to this Django app.
+```
+
+The skill should guide the agent toward:
+
+- Random high-entropy reset tokens
+- Hashing reset tokens in the database
+- Short expiration
+- Single-use tokens
+- Generic reset responses
+- Rate limiting
+- No account enumeration
+
+### Authorization Review
+
+```text
+Use $secure-webapp quick-check to inspect these API routes for IDOR issues.
+```
+
+The skill should look for route handlers that fetch by ID without scoping by the current user or tenant.
+
+Risky pattern:
+
+```javascript
+const order = await db.orders.findById(req.params.id);
+```
+
+Safer pattern:
+
+```javascript
+const order = await db.orders.findOne({
+  where: { id: req.params.id, userId: req.user.id }
+});
+```
+
+### Upload Hardening
+
+```text
+Use $secure-webapp harden for this profile-photo upload endpoint.
+```
+
+The skill should consider:
+
+- Maximum file size
+- Server-generated filenames
+- Storage outside the web root
+- Magic-byte validation
+- Restricted content types
+- Safe image processing
+- Authenticated downloads when needed
+
+### Design Review
+
+```text
+Use $secure-webapp design-review for an invite-link feature.
+```
+
+The skill should ask or infer:
+
+- Who can create invite links?
+- What resource does the invite grant access to?
+- Can links be revoked?
+- How long do they live?
+- Are tokens stored hashed?
+- Are invites single-use or multi-use?
+- Are invite acceptances logged?
+- What happens if the user is removed before accepting?
+
+## How It Works
+
+The skill uses progressive disclosure:
+
+1. **Skill metadata** tells the agent when to trigger the skill.
+2. **`SKILL.md`** provides compact routing, behavior rules, and high-priority watchlist items.
+3. **Reference files** are loaded only when relevant to the task.
+4. **Audit checklist** is loaded only for review/audit/hardening workflows.
+5. **Maintenance scripts** refresh upstream OWASP source material, deterministically sync the curated references, validate the package, and build the `.skill` archive.
+
+This keeps token usage low during normal coding tasks while preserving deeper guidance for security-sensitive work.
 
 ## Explicit Invocation Options
 
@@ -328,100 +404,21 @@ The skill routes tasks to focused references:
 | Logging, errors, fail-closed behavior, exceptional conditions | `references/logging-and-errors.md` |
 | Threat modeling, design review, multi-tenancy, abuse cases | `references/insecure-design.md` |
 
-## Examples
+## Token Usage
 
-### Secure Code Generation
+Approximate runtime token impact after optimization:
 
-```text
-Use $secure-webapp to add a password reset flow to this Django app.
-```
+- Metadata only: about 100 tokens
+- Triggered `SKILL.md`: about 1,000 tokens
+- One relevant reference: commonly 2,000-3,000 tokens
+- Quick-check: usually 3,000-6,000 tokens depending on references loaded
+- Full audit: usually 8,000-14,000+ tokens depending on scope
 
-The skill should guide the agent toward:
+The skill is designed so normal coding tasks load only the compact routing layer plus the most relevant reference files.
 
-- Random high-entropy reset tokens
-- Hashing reset tokens in the database
-- Short expiration
-- Single-use tokens
-- Generic reset responses
-- Rate limiting
-- No account enumeration
+## Maintainer Guide
 
-### Authorization Review
-
-```text
-Use $secure-webapp quick-check to inspect these API routes for IDOR issues.
-```
-
-The skill should look for route handlers that fetch by ID without scoping by the current user or tenant.
-
-Risky pattern:
-
-```javascript
-const order = await db.orders.findById(req.params.id);
-```
-
-Safer pattern:
-
-```javascript
-const order = await db.orders.findOne({
-  where: { id: req.params.id, userId: req.user.id }
-});
-```
-
-### Upload Hardening
-
-```text
-Use $secure-webapp harden for this profile-photo upload endpoint.
-```
-
-The skill should consider:
-
-- Maximum file size
-- Server-generated filenames
-- Storage outside the web root
-- Magic-byte validation
-- Restricted content types
-- Safe image processing
-- Authenticated downloads when needed
-
-### Design Review
-
-```text
-Use $secure-webapp design-review for an invite-link feature.
-```
-
-The skill should ask or infer:
-
-- Who can create invite links?
-- What resource does the invite grant access to?
-- Can links be revoked?
-- How long do they live?
-- Are tokens stored hashed?
-- Are invites single-use or multi-use?
-- Are invite acceptances logged?
-- What happens if the user is removed before accepting?
-
-## OWASP Sources
-
-This skill is curated from multiple OWASP projects:
-
-- OWASP Top 10:2025  
-  <https://github.com/OWASP/Top10>
-
-- OWASP Application Security Verification Standard 5.0  
-  <https://github.com/OWASP/ASVS>
-
-- OWASP Cheat Sheet Series  
-  <https://github.com/OWASP/CheatSheetSeries>
-
-- OWASP Web Security Testing Guide, selected files  
-  <https://github.com/OWASP/wstg>
-
-The tracked upstream files are listed in `scripts/manifest.json`.
-
-Repository: <https://github.com/hov172/secure-webapp-skill>
-
-## Maintenance Workflow
+### Maintenance Workflow
 
 There are two ways this skill gets updated:
 
@@ -482,7 +479,7 @@ The update flow does not require an API key. It reads OWASP repositories directl
 
 The package script intentionally excludes GitHub-facing docs, `_sources/`, cache files, and local scratch directories from the runtime `.skill` archive.
 
-## Automated OWASP Refresh
+### Automated OWASP Refresh
 
 This repository includes `.github/workflows/refresh-owasp.yml`.
 
@@ -502,7 +499,7 @@ This is the no-key automation path: OWASP source files are refreshed automatical
 
 The repository can keep `_sources/` in Git history for maintenance. The runtime `.skill` package still excludes `_sources/` so token usage stays low.
 
-## Releases
+### Releases
 
 This repository includes `.github/workflows/release.yml`.
 
@@ -515,7 +512,7 @@ git push origin vX.Y.Z
 
 The release workflow builds `secure-webapp.skill`, generates `SHA256SUMS`, validates the package, and uploads both artifacts to the GitHub release.
 
-## Packaging
+### Packaging
 
 The distributable artifact is:
 
@@ -547,20 +544,46 @@ It does not contain:
 - Python cache files
 - Local build scratch directories
 
-## Token Usage
+## OWASP Sources
 
-Approximate runtime token impact after optimization:
+This skill is curated from multiple OWASP projects:
 
-- Metadata only: about 100 tokens
-- Triggered `SKILL.md`: about 1,000 tokens
-- One relevant reference: commonly 2,000-3,000 tokens
-- Quick-check: usually 3,000-6,000 tokens depending on references loaded
-- Full audit: usually 8,000-14,000+ tokens depending on scope
+- OWASP Top 10:2025  
+  <https://github.com/OWASP/Top10>
 
-The skill is designed so normal coding tasks load only the compact routing layer plus the most relevant reference files.
+- OWASP Application Security Verification Standard 5.0  
+  <https://github.com/OWASP/ASVS>
+
+- OWASP Cheat Sheet Series  
+  <https://github.com/OWASP/CheatSheetSeries>
+
+- OWASP Web Security Testing Guide, selected files  
+  <https://github.com/OWASP/wstg>
+
+You can view the main **OWASP Foundation GitHub organization** here: <https://github.com/OWASP>.
+
+The tracked upstream files are listed in `scripts/manifest.json`.
+
+Repository: <https://github.com/hov172/secure-webapp-skill>
 
 ## License and Attribution
 
 See `license.txt` for OWASP attribution and license notes.
 
 OWASP and OWASP project names are trademarks of the OWASP Foundation. This skill is not an official OWASP project unless explicitly published as one.
+
+---
+
+## 🌐 Connect With Me
+- [GitHub](https://github.com/hov172)
+- [PowerShell Gallery](https://www.powershellgallery.com/profiles/hov172)
+- 📨 Slack: **@Hov172**
+- 🕹️ Discord: **Jay172_**
+- [LinkedIn](https://www.linkedin.com/in/jesus-a-785bb616?trk=people-guest_people_search-card)
+- 🐦 [Twitter / X (@AyalaSolutions)](https://twitter.com/AyalaSolutions)
+- <a href="https://bsky.app/profile/ayalasolutions.bsky.social"><img src="https://raw.githubusercontent.com/bluesky-social/social-app/main/assets/logo.png" width="20" alt="Bluesky Logo"></a> [@AyalaSolutions](https://bsky.app/profile/ayalasolutions.bsky.social)
+- 📧 *Contact via GitHub, Social accounts issues or discussions*
+
+---
+
+⭐ *If you find my tools useful, consider giving them a star to support future development!*
