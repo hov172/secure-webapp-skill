@@ -9,7 +9,6 @@
       "license": "CC BY 3.0",
       "license_url": "https://creativecommons.org/licenses/by/3.0/",
       "files": [
-        "0x00-Introduction.md",
         "A01_2025-Broken_Access_Control.md",
         "A02_2025-Security_Misconfiguration.md",
         "A03_2025-Software_Supply_Chain_Failures.md",

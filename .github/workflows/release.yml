@@ -24,7 +24,10 @@ jobs:
           python3 scripts/release_checksums.py
           python3 scripts/check_skill.py
       - name: Upload release artifacts
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           files: |
             secure-webapp.skill
