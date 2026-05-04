@@ -7,8 +7,12 @@ const os = require('os');
 const args = process.argv.slice(2);
 const isGlobal = args.includes('--global') || args.includes('-g');
 const isCodex = args.includes('--codex');
+const isGemini = args.includes('--gemini');
 
-const clientFolder = isCodex ? '.codex' : '.claude';
+let clientFolder = '.claude';
+if (isCodex) clientFolder = '.codex';
+if (isGemini) clientFolder = '.gemini';
+
 const baseDir = isGlobal ? os.homedir() : process.cwd();
 const targetDir = path.join(baseDir, clientFolder, 'skills', 'secure-webapp');
 

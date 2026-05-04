@@ -11,6 +11,10 @@ elif [ "$1" = "--codex" ]; then
     INSTALL_DIR="$HOME/.codex/skills"
 elif [ "$1" = "--local-codex" ]; then
     INSTALL_DIR="$PWD/.codex/skills"
+elif [ "$1" = "--gemini" ]; then
+    INSTALL_DIR="$HOME/.gemini/skills"
+elif [ "$1" = "--local-gemini" ]; then
+    INSTALL_DIR="$PWD/.gemini/skills"
 fi
 
 mkdir -p "$INSTALL_DIR"

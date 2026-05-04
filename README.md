@@ -59,9 +59,10 @@ npx github:hov172/secure-webapp-skill
 npx github:hov172/secure-webapp-skill --global
 ```
 
-**Install for Codex instead of Claude:**
+**Install for Codex or Gemini instead of Claude:**
 ```sh
 npx github:hov172/secure-webapp-skill --codex
+npx github:hov172/secure-webapp-skill --gemini
 ```
 
 ### Quick Install via Bash
@@ -76,6 +77,12 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-ski
 **Install project-locally (current directory):**
 ```sh
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --local
+```
+
+**Install for Codex or Gemini:**
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --codex
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --gemini
 ```
 
 ### Manual Install
