@@ -182,6 +182,7 @@ If the agent does not recognize the skill, check that the installed folder conta
 ```text
 ~/.claude/skills/secure-webapp/SKILL.md
 ~/.codex/skills/secure-webapp/SKILL.md
+~/.gemini/skills/secure-webapp/SKILL.md
 ```
 
 Avoid an extra nested folder such as `secure-webapp/secure-webapp/SKILL.md`.
@@ -508,10 +509,13 @@ It contains:
 
 It does not contain:
 
+- `package.json`
 - `README.md`
 - `_sources/`
 - `.gitignore`
 - `scripts/README.md`
+- `scripts/install.sh`
+- `bin/install.js`
 - `SHA256SUMS` / `SHA256SUMS.asc`
 - Python cache files
 - Local build scratch directories
