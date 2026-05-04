@@ -45,7 +45,42 @@ This keeps token usage low during normal coding tasks while preserving deeper gu
 
 ## Installation
 
-You can install the skill from either the source folder or the packaged archive.
+The fastest way to install the skill is using `npx`. This downloads and copies the required files directly into your agent's skill directory without leaving a cloned repository behind.
+
+### Quick Install via npx (Recommended)
+
+**Install project-locally (current directory):**
+```sh
+npx github:hov172/secure-webapp-skill
+```
+
+**Install globally (system-wide):**
+```sh
+npx github:hov172/secure-webapp-skill --global
+```
+
+**Install for Codex instead of Claude:**
+```sh
+npx github:hov172/secure-webapp-skill --codex
+```
+
+### Quick Install via Bash
+
+For environments without Node.js, you can install the skill via bash:
+
+**Install globally (system-wide):**
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)"
+```
+
+**Install project-locally (current directory):**
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --local
+```
+
+### Manual Install
+
+You can also manually install the skill from either the source folder or the packaged archive.
 
 Use the **source folder** when you want to maintain or edit the skill.
 

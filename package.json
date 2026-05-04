@@ -1,0 +1,22 @@
+{
+  "name": "secure-webapp-skill",
+  "version": "1.0.0",
+  "description": "OWASP-grounded security guidance skill for Claude and Codex.",
+  "bin": {
+    "secure-webapp-skill": "./bin/install.js",
+    "install-secure-webapp": "./bin/install.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hov172/secure-webapp-skill.git"
+  },
+  "keywords": [
+    "claude",
+    "codex",
+    "skill",
+    "security",
+    "owasp"
+  ],
+  "author": "",
+  "license": "MIT"
+}
