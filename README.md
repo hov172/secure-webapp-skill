@@ -1,8 +1,32 @@
-# secure-webapp
+<div align="center">
+  <img src="assets/secure-webapp-large.svg" alt="Secure Web App Logo" width="150" />
+  <h1>Secure Web App Skill</h1>
+  
+  <a href="https://github.com/hov172/secure-webapp-skill/actions/workflows/validate.yml"><img src="https://github.com/hov172/secure-webapp-skill/actions/workflows/validate.yml/badge.svg" alt="Validate Status" /></a>
+  <a href="https://github.com/hov172/secure-webapp-skill/actions/workflows/refresh-owasp.yml"><img src="https://github.com/hov172/secure-webapp-skill/actions/workflows/refresh-owasp.yml/badge.svg" alt="OWASP Refresh Status" /></a>
+  <a href="https://github.com/hov172/secure-webapp-skill/releases"><img src="https://img.shields.io/github/v/release/hov172/secure-webapp-skill?color=blue&label=release" alt="Release" /></a>
+  <a href="https://github.com/hov172/secure-webapp-skill/blob/main/license.txt"><img src="https://img.shields.io/github/license/hov172/secure-webapp-skill" alt="License" /></a>
+  
+  <br />
+  <p><strong>OWASP-grounded security guidance for AI-assisted development workflows.</strong></p>
+</div>
 
-`secure-webapp` is a Claude/Codex skill for applying practical OWASP-grounded security guidance while building, editing, reviewing, or hardening web applications.
+---
 
-It is designed for AI-assisted development workflows where security needs to be present by default, without turning every coding task into a long security lecture. The skill helps an agent notice risky patterns, choose safer implementations, and produce focused security review findings.
+`secure-webapp` is a Claude/Codex/Gemini skill for applying practical security guidance while building, editing, reviewing, or hardening web applications.
+
+It is designed for AI workflows where security needs to be present by default, without turning every coding task into a long security lecture. The skill helps an agent notice risky patterns, choose safer implementations, and produce focused security review findings.
+
+## Table of Contents
+- [What This Skill Is For](#what-this-skill-is-for)
+- [What This Skill Is Not](#what-this-skill-is-not)
+- [How It Works](#how-it-works)
+- [Installation](#installation)
+- [Explicit Invocation Options](#explicit-invocation-options)
+- [Reference Files](#reference-files)
+- [Examples](#examples)
+- [OWASP Sources](#owasp-sources)
+- [Maintenance Workflow](#maintenance-workflow)
 
 ## What This Skill Is For
 
@@ -29,7 +53,8 @@ This is not a penetration-testing agent and does not claim to exploit running sy
 - Focused remediation
 - OWASP-informed audit checklists
 
-If dynamic testing or formal penetration testing is needed, this skill can help prepare scope and review code, but it should not replace a qualified security test.
+> [!WARNING]
+> If dynamic testing or formal penetration testing is needed, this skill can help prepare scope and review code, but it should **not** replace a qualified security test.
 
 ## How It Works
 
@@ -87,7 +112,8 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-ski
 
 ### Manual Install
 
-You can also manually install the skill from either the source folder or the packaged archive.
+> [!NOTE]
+> You can also manually install the skill from either the source folder or the packaged archive.
 
 Use the **source folder** when you want to maintain or edit the skill.
 
@@ -471,7 +497,8 @@ The workflow runs weekly on Monday at 09:00 UTC and can also be started manually
 
 This is the no-key automation path: OWASP source files are refreshed automatically, the curated `references/*.md` files are deterministically synced from the refreshed cache, and the distributable package is rebuilt from the updated tree.
 
-The skill content changes only through this refresh pipeline. Runtime installs do not self-update inside Claude or Codex; they update when you reinstall the rebuilt `.skill` archive or refresh the source folder.
+> [!IMPORTANT]
+> The skill content changes only through this refresh pipeline. Runtime installs do not self-update inside your agent; they update when you reinstall the rebuilt `.skill` archive or refresh the source folder via `npx` or `bash`.
 
 The repository can keep `_sources/` in Git history for maintenance. The runtime `.skill` package still excludes `_sources/` so token usage stays low.
 
