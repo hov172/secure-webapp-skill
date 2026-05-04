@@ -35,7 +35,7 @@ def should_include(path: Path, package_name: str) -> bool:
         return False
     if path.suffix in {".pyc", ".pyo"}:
         return False
-    if rel.as_posix() == "scripts/README.md":
+    if rel.as_posix() in {"scripts/README.md", "scripts/install.sh", "bin/install.js"}:
         return False
     allowed_roots = {"agents", "assets", "references", "scripts"}
     if rel.parts[0] in allowed_roots:
