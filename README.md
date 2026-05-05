@@ -495,6 +495,9 @@ The package script intentionally excludes GitHub-facing docs, `_sources/`, cache
 
 This repository includes `.github/workflows/refresh-owasp.yml`.
 
+> [!IMPORTANT]
+> **One-time setup:** Go to **Settings → Actions → General → Workflow permissions** and enable **"Allow GitHub Actions to create and approve pull requests"**. Without this, the PR creation step will fail.
+
 The workflow runs weekly on Monday at 09:00 UTC and can also be started manually from GitHub Actions. It:
 
 1. Runs `python3 scripts/refresh.py --quiet`.
