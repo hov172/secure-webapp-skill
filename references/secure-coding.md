@@ -4,6 +4,15 @@ Covers OWASP ASVS V15 (Secure Coding and Architecture) and most of V12 (Secure C
 
 > **Note on 2025 Top 10 framing:** SSRF was a standalone Top 10 entry (A10) in 2021 but in the 2025 edition was consolidated into A01 (Broken Access Control), recognizing that SSRF is fundamentally an access-control failure where the attacker tricks your *server* into accessing things on their behalf. Cross-link to `authorization.md` for the broader access-control framing. Software supply chain content moved to its own reference (`supply-chain.md`) since it was elevated to A03 in 2025.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- SSRF: allowlist destinations and block private IPs after DNS resolution.
+- Redirects: re-check every hop and reject unsafe schemes.
+- Deserialization: keep untrusted data in safe formats such as JSON.
+- Prototype pollution: strip dangerous keys before merging untrusted objects.
+
 ## SSRF: Server-Side Request Forgery
 
 The threat: your server makes an HTTP request to a URL controlled by user input. Possible flavors:

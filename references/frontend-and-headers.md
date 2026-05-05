@@ -2,6 +2,16 @@
 
 Covers OWASP ASVS V3 (Web Frontend Security). The browser is your application's untrusted-but-essential delivery mechanism — these defenses configure the browser to enforce policies on your behalf.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- Browser controls: CSP plus HSTS and defensive headers on HTML responses.
+- Cookies: Secure, HttpOnly, SameSite; do not rely on credentialed wildcard CORS.
+- Clickjacking: prefer CSP frame-ancestors and deny framing by default.
+- CSRF: keep anti-forgery tokens or equivalent defenses for cookie-auth state changes.
+- Redirects: keep destinations relative or allowlisted; reject protocol-relative URLs.
+
 ## Security headers — the high-leverage set
 
 Set these on every response (or at least every HTML response). Most frameworks have middleware (`helmet` for Express, `django-csp` and `SecurityMiddleware` for Django, `secure_headers` gem for Rails).

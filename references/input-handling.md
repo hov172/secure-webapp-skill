@@ -4,6 +4,15 @@ Covers OWASP ASVS chapters V1 (Encoding and Sanitization) and V2 (Validation and
 
 The core principle: **untrusted data is anything that crosses a trust boundary**, including request bodies, query strings, headers, cookies, file contents, third-party API responses, database rows that originated from user input, environment variables in shared environments, and AI/LLM outputs that will be interpreted as code or commands. Every interpreter (HTML, SQL, shell, regex, LDAP, XML, template engine) has its own escaping rules. Mixing them up is where injection happens.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- Validate at the boundary; encode at the output; prefer allowlists and length caps.
+- Database access: use parameterized queries or ORM query builders, never string-built SQL.
+- XSS defense: auto-escape by default; sanitize only when rich HTML is truly required.
+- Shell calls: use argv-form process APIs, not shell strings.
+
 ## The decision: validate, encode, or sanitize?
 
 These are not interchangeable.

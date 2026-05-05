@@ -2,6 +2,16 @@
 
 Covers OWASP ASVS V11 (Cryptography) and V14 (Data Protection). For password hashing specifically, see `auth-and-sessions.md`.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- Password storage: use Argon2id, bcrypt for legacy, or PBKDF2 where FIPS is required.
+- Encryption: prefer AEAD modes such as AES-GCM or ChaCha20-Poly1305.
+- Randomness: use a CSPRNG for tokens, keys, and nonces.
+- Keys: separate keys from data and plan for rotation.
+- Transport: keep TLS verification on and avoid insecure fallback paths.
+
 ## The cardinal rule
 
 **Use vetted libraries; do not implement cryptographic primitives yourself.** Even people who do this for a living make subtle mistakes. The right level of "doing crypto" for application developers is choosing the right algorithm and parameters, and using a high-level library that exposes a hard-to-misuse API.

@@ -2,6 +2,14 @@
 
 Covers OWASP ASVS V16 (Security Logging and Error Handling) plus OWASP Top 10 2025 A09 (Security Logging & Alerting Failures) and A10 (Mishandling of Exceptional Conditions). Logs are dual-purpose: they're how you detect and respond to security incidents, and they're a common channel for accidentally leaking the secrets you're trying to protect. Exceptional conditions — what happens when something goes wrong — became its own Top 10 category in 2025 because failing open, leaking errors, and mishandling partial-completion states are how a surprising number of vulnerabilities actually land.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- Errors: do not leak stack traces or sensitive implementation details to clients.
+- Logs: capture security-relevant events, but never secrets or raw auth payloads.
+- Observability: centralize logs so incidents can be traced and alerted on.
+
 ## What to log
 
 The minimum useful security log includes:

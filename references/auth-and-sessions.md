@@ -2,6 +2,16 @@
 
 Covers OWASP ASVS chapters V6 (Authentication) and V7 (Session Management). Plus password storage, which technically lives in V11 but is too tightly coupled to auth to separate.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- Password storage: Argon2id first; bcrypt is legacy; PBKDF2 is the FIPS fallback.
+- Password reset: use hashed, single-use, expiring tokens and invalidate other sessions after use.
+- Sessions: Secure, HttpOnly, SameSite cookies plus session rotation on login and privilege change.
+- MFA: prefer passkeys/WebAuthn, then TOTP; keep SMS/email as fallback only.
+- Auth flows: rate-limit login, reset, and MFA paths to slow credential stuffing.
+
 ## The threat model in plain terms
 
 Authentication answers "who is this?" Session management answers "is this the same who across requests?" Both must be impersonation-resistant. The realistic attackers a typical web app faces:

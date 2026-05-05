@@ -4,6 +4,15 @@ Covers OWASP ASVS chapter V8. This is the most commonly broken thing in AI-assis
 
 > **2025 Top 10 framing:** OWASP Top 10 2025 keeps Broken Access Control at A01 (the #1 most serious application security risk) and consolidates SSRF (formerly A10:2021) into this category — recognizing that SSRF is access control failing in the *server-to-server* direction. The detailed SSRF defenses live in `secure-coding.md`; this reference covers user-to-resource access control. Both are forms of the same underlying failure: insufficient enforcement of who/what is allowed to access what.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- Object-level checks: scope queries by owner or org; do not rely on authentication alone.
+- Mass assignment: allowlist writable fields and block role, tenant, and owner changes.
+- Multi-tenant apps: enforce membership and role checks per tenant boundary.
+- Use 404 for hidden resources and 403 for visible actions the user may not take.
+
 ## The shape of the problem
 
 Authorization answers: **given that we know who the user is, are they allowed to do this specific operation on this specific resource?**
