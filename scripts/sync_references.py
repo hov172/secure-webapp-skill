@@ -133,7 +133,7 @@ def sync_frontend() -> list[str]:
         read_source("cheatsheets", "Content_Security_Policy_Cheat_Sheet.md"),
         read_source("cheatsheets", "HTTP_Headers_Cheat_Sheet.md"),
         read_source("cheatsheets", "HTTP_Strict_Transport_Security_Cheat_Sheet.md"),
-        read_source("cheatsheets", "Cross_Site_Request_Forgery_Prevention_Cheat_Sheet.md"),
+        read_source("cheatsheets", "Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md"),
         read_source("cheatsheets", "Clickjacking_Defense_Cheat_Sheet.md"),
         read_source("cheatsheets", "Cookie_Theft_Mitigation_Cheat_Sheet.md"),
     ]
