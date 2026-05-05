@@ -40,7 +40,7 @@ def should_include(path: Path, package_name: str) -> bool:
     allowed_roots = {"agents", "assets", "references", "scripts"}
     if rel.parts[0] in allowed_roots:
         return True
-    return rel.as_posix() in {"SKILL.md", "license.txt"}
+    return rel.as_posix() in {"SKILL.md", "LICENSE.txt"}
 
 
 def main() -> None:
