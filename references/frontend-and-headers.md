@@ -11,7 +11,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - Clickjacking: prefer CSP frame-ancestors and deny framing by default.
 - CSRF: keep anti-forgery tokens or equivalent defenses for cookie-auth state changes.
 - Redirects: keep destinations relative or allowlisted; reject protocol-relative URLs.
-
 ## Security headers — the high-leverage set
 
 Set these on every response (or at least every HTML response). Most frameworks have middleware (`helmet` for Express, `django-csp` and `SecurityMiddleware` for Django, `secure_headers` gem for Rails).

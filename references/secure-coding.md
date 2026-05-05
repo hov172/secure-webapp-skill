@@ -12,7 +12,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - Redirects: re-check every hop and reject unsafe schemes.
 - Deserialization: keep untrusted data in safe formats such as JSON.
 - Prototype pollution: strip dangerous keys before merging untrusted objects.
-
 ## SSRF: Server-Side Request Forgery
 
 The threat: your server makes an HTTP request to a URL controlled by user input. Possible flavors:

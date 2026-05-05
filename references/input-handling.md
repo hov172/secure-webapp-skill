@@ -12,7 +12,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - Database access: use parameterized queries or ORM query builders, never string-built SQL.
 - XSS defense: auto-escape by default; sanitize only when rich HTML is truly required.
 - Shell calls: use argv-form process APIs, not shell strings.
-
 ## The decision: validate, encode, or sanitize?
 
 These are not interchangeable.

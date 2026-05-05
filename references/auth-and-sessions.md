@@ -11,7 +11,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - Sessions: Secure, HttpOnly, SameSite cookies plus session rotation on login and privilege change.
 - MFA: prefer passkeys/WebAuthn, then TOTP; keep SMS/email as fallback only.
 - Auth flows: rate-limit login, reset, and MFA paths to slow credential stuffing.
-
 ## The threat model in plain terms
 
 Authentication answers "who is this?" Session management answers "is this the same who across requests?" Both must be impersonation-resistant. The realistic attackers a typical web app faces:

@@ -13,7 +13,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - CI auth: prefer OIDC over long-lived cloud credentials.
 - Releases: sign artifacts and keep provenance evidence.
 - Install path: limit untrusted postinstall scripts and audit dependencies.
-
 ## Why this got worse
 
 Recent supply chain incidents keep showing the same pattern: attackers target developer machines, package registries, CI runners, IDE extensions, build tools, and update paths because those systems hold the keys to publish artifacts that downstream users trust.

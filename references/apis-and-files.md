@@ -11,7 +11,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - Uploads: cap size, validate type and magic bytes, and store outside the web root.
 - Cookie-auth APIs: keep CSRF protection on all state-changing routes.
 - Programmatic APIs: default deny, per-resource auth, and schema discipline.
-
 ## API surface: what changes vs. server-rendered apps
 
 API endpoints are programmatic, easy to enumerate, and accessed by code. The threat model shifts:

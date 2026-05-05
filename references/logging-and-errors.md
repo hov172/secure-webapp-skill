@@ -9,7 +9,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - Errors: do not leak stack traces or sensitive implementation details to clients.
 - Logs: capture security-relevant events, but never secrets or raw auth payloads.
 - Observability: centralize logs so incidents can be traced and alerted on.
-
 ## What to log
 
 The minimum useful security log includes:

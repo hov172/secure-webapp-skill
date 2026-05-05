@@ -12,7 +12,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - Mass assignment: allowlist writable fields and block role, tenant, and owner changes.
 - Multi-tenant apps: enforce membership and role checks per tenant boundary.
 - Use 404 for hidden resources and 403 for visible actions the user may not take.
-
 ## The shape of the problem
 
 Authorization answers: **given that we know who the user is, are they allowed to do this specific operation on this specific resource?**

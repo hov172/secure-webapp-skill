@@ -10,7 +10,6 @@ Deterministic notes regenerated from the refreshed OWASP source cache.
 - Multi-tenant design: make isolation explicit and review revocation paths.
 - Attack surface: reduce exposed features and privileged paths.
 - Abuse thinking: ask how the feature breaks, not just how it should work.
-
 ## The distinction that matters
 
 - **Implementation defect** — the design said "check that the user owns this resource"; the code forgot to. Fix in the handler.
