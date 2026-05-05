@@ -40,7 +40,7 @@ def frontmatter() -> dict[str, str]:
 def check_required_paths(skill_name: str) -> None:
     required = [
         "SKILL.md",
-        "license.txt",
+        "LICENSE.txt",
         ".gitignore",
         "agents/openai.yaml",
         "assets/audit-checklist.md",
@@ -195,7 +195,7 @@ def check_package(skill_name: str) -> None:
     prefix = f"{skill_name}/"
     for needed in (
         f"{prefix}SKILL.md",
-        f"{prefix}license.txt",
+        f"{prefix}LICENSE.txt",
         f"{prefix}agents/openai.yaml",
         f"{prefix}scripts/check_skill.py",
         f"{prefix}scripts/package_skill.py",
