@@ -5,7 +5,7 @@
   <a href="https://github.com/hov172/secure-webapp-skill/actions/workflows/validate.yml"><img src="https://github.com/hov172/secure-webapp-skill/actions/workflows/validate.yml/badge.svg" alt="Validate Status" /></a>
   <a href="https://github.com/hov172/secure-webapp-skill/actions/workflows/refresh-owasp.yml"><img src="https://github.com/hov172/secure-webapp-skill/actions/workflows/refresh-owasp.yml/badge.svg" alt="OWASP Refresh Status" /></a>
   <a href="https://github.com/hov172/secure-webapp-skill/releases"><img src="https://img.shields.io/github/v/release/hov172/secure-webapp-skill?color=blue&label=release" alt="Release" /></a>
-  <a href="https://github.com/hov172/secure-webapp-skill/blob/main/license.txt"><img src="https://img.shields.io/github/license/hov172/secure-webapp-skill" alt="License" /></a>
+  <a href="https://github.com/hov172/secure-webapp-skill/blob/main/LICENSE.txt"><img src="https://img.shields.io/github/license/hov172/secure-webapp-skill?cacheSeconds=0" alt="License" /></a>
   
   <br />
   <p><strong>OWASP-grounded security guidance for AI-assisted development workflows.</strong></p>
