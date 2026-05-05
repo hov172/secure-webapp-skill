@@ -2,6 +2,15 @@
 
 Covers OWASP Top 10 2025 A06 (Insecure Design), which corresponds to design-level flaws — security gaps that no amount of careful implementation can fix because the right control was never specified in the first place. This is the area the original skill underweighted; vibe coders especially benefit from a few lightweight design-time habits because the iterative "build first, secure later" loop tends to bake in design flaws that are extremely expensive to remove later.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- Design review: start with trust boundaries, abuse cases, and the failure mode.
+- Multi-tenant design: make isolation explicit and review revocation paths.
+- Attack surface: reduce exposed features and privileged paths.
+- Abuse thinking: ask how the feature breaks, not just how it should work.
+
 ## The distinction that matters
 
 - **Implementation defect** — the design said "check that the user owns this resource"; the code forgot to. Fix in the handler.

@@ -4,6 +4,16 @@ Covers OWASP Top 10 2025 A03 (Software Supply Chain Failures) — a category tha
 
 This is now A03, ranked #3 — and was the **top concern** in the 2025 community survey. It's relevant to every web app, even simple ones, because every modern web app has hundreds of transitive dependencies and a CI/CD pipeline.
 
+## OWASP source sync
+
+Deterministic notes regenerated from the refreshed OWASP source cache.
+
+- Inventory: commit lockfiles and generate SBOMs for releases.
+- CI/CD: pin GitHub Actions and other build dependencies.
+- CI auth: prefer OIDC over long-lived cloud credentials.
+- Releases: sign artifacts and keep provenance evidence.
+- Install path: limit untrusted postinstall scripts and audit dependencies.
+
 ## Why this got worse
 
 Recent supply chain incidents keep showing the same pattern: attackers target developer machines, package registries, CI runners, IDE extensions, build tools, and update paths because those systems hold the keys to publish artifacts that downstream users trust.
