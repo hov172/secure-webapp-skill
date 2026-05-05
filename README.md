@@ -158,6 +158,40 @@ unzip secure-webapp.skill -d /path/to/project/.codex/skills
 
 Use global installation for security guidance across all web-app work. Use project-local installation when the skill should travel with one repo or stay limited to one codebase.
 
+#### Install for Gemini CLI: all projects
+
+Install the source folder globally for Gemini CLI:
+
+```sh
+mkdir -p ~/.gemini/skills
+cp -R secure-webapp ~/.gemini/skills/secure-webapp
+```
+
+Or install from the packaged archive:
+
+```sh
+mkdir -p ~/.gemini/skills
+unzip secure-webapp.skill -d ~/.gemini/skills
+```
+
+After installing, restart Gemini CLI or start a new session so the skill index is refreshed.
+
+#### Install for Gemini CLI: one project
+
+If your Gemini client supports project-local skills, place the skill under the project:
+
+```sh
+mkdir -p /path/to/project/.gemini/skills
+cp -R secure-webapp /path/to/project/.gemini/skills/secure-webapp
+```
+
+Or from the packaged archive:
+
+```sh
+mkdir -p /path/to/project/.gemini/skills
+unzip secure-webapp.skill -d /path/to/project/.gemini/skills
+```
+
 ### Verify installation
 
 Ask the agent to use the skill explicitly:
