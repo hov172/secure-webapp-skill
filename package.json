@@ -1,6 +1,6 @@
 {
   "name": "secure-webapp-skill",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "OWASP-grounded security guidance skill for Claude and Codex.",
   "bin": {
     "secure-webapp-skill": "./bin/install.js",
