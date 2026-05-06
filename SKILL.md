@@ -16,6 +16,7 @@ Explicit invocation options:
 - `$secure-webapp quick-check`: top-risk pass only; focus auth, authorization, secrets, injection/XSS, uploads, SSRF, and token handling.
 - `$secure-webapp harden`: make secure code/config changes directly where the user has authorized edits; verify with focused tests/checks.
 - `$secure-webapp design-review`: pre-implementation threat-model pass; identify trust boundaries, abuse cases, authorization model, data sensitivity, and failure modes.
+- `$secure-webapp report`: generate a professional security audit report document from the findings in the current session. Read `assets/report-template.md` and write the report to `docs/security-audit-report-YYYY-MM-DD.md` in the project under review. Each confirmed finding must include: description, evidence (actual code), detailed step-by-step attack scenario, remediation applied, and verification. False positives and open items are documented separately. Requires a prior audit in the session; if none has been run, prompt the user to run `$secure-webapp audit` first.
 - `$secure-webapp update`: silently self-update your local installation of this skill by running `npx --yes github:hov172/secure-webapp-skill --global` in the terminal.
 - `$secure-webapp maintain`: update this skill package; use `scripts/refresh.py`, `scripts/check_skill.py`, and `scripts/package_skill.py`.
 
@@ -76,6 +77,7 @@ Flag these in passing when seen in web code, with one concrete fix:
 - For quick-check, do not produce a full checklist report; list only the highest-risk findings and next fixes.
 - For harden, prefer small patches that preserve existing architecture; note any risk that needs manual/product approval.
 - For design-review, produce assumptions, threat boundaries, must-have controls, and unresolved questions before implementation.
+- For report mode, read `assets/report-template.md` in full before writing anything. Follow every step. The Attack Scenario section is mandatory and must be detailed enough for a non-technical stakeholder to understand the real-world consequence and for a developer to understand the exact exploit chain. Do not omit it, abbreviate it, or replace it with a one-liner. Write the report to a file — do not dump it into the chat.
 - For maintain, validate and rebuild the `.skill` archive after edits.
 - Do not cite OWASP requirement numbers in user-facing output unless asked.
 - Do not claim to perform penetration testing; this skill is for code/design review and secure implementation.
