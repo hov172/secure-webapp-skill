@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-05-05T00:09:02.357535+00:00",
+  "last_run": "2026-05-06T02:10:44.423288+00:00",
   "sources": {
     "asvs_5_0": {
       "base_url": "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/",
@@ -45,7 +45,7 @@
       "base_url": "https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/cheatsheets/",
       "files": {
         "AI_Agent_Security_Cheat_Sheet.md": {
-          "sha256": "be20cfe6ab4dcd2c35a519ed303a3b1f3ad620f12bbc71a4d9d1fc78342b2a46"
+          "sha256": "3d994bf48856415069dbf4663b98aeb9bbc363885581576d6e54effd816c0e30"
         },
         "Abuse_Case_Cheat_Sheet.md": {
           "sha256": "7d1d46f108573e27cc6aab7c239a917192ba5d336de17ec5c7c8f12aa31c1210"
@@ -132,7 +132,7 @@
           "sha256": "581a9bb96bc934fa277fde7610b6e05fdd485d79ff617851de99fc1262f56f74"
         },
         "Logging_Cheat_Sheet.md": {
-          "sha256": "872fb60a9c787b450f6fab40a6a36bdaef71451699c52ef6d38b85488bac7a4a"
+          "sha256": "342a2e9161f004a4aebe217da8476344e1b117f579f6252969e3b9054253eca7"
         },
         "Logging_Vocabulary_Cheat_Sheet.md": {
           "sha256": "59d167acecbad5d8fe9c8f146828f226702269e9ce6e966d00511c3264abe246"
