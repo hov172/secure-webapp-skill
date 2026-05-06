@@ -24,6 +24,13 @@ It is designed for AI workflows where security needs to be present by default, w
 - [Examples](#examples)
 - [How It Works](#how-it-works)
 - [Explicit Invocation Options](#explicit-invocation-options)
+  - [`$secure-webapp audit`](#secure-webapp-audit)
+  - [`$secure-webapp quick-check`](#secure-webapp-quick-check)
+  - [`$secure-webapp harden`](#secure-webapp-harden)
+  - [`$secure-webapp design-review`](#secure-webapp-design-review)
+  - [`$secure-webapp report`](#secure-webapp-report)
+  - [`$secure-webapp update`](#secure-webapp-update)
+  - [`$secure-webapp maintain`](#secure-webapp-maintain)
 - [Reference Files](#reference-files)
 - [Token Usage](#token-usage)
 - [Maintainer Guide](#maintainer-guide)
@@ -414,6 +421,60 @@ Expected behavior:
 - Check failure modes and race conditions
 - List unresolved product/security questions
 
+### `$secure-webapp report`
+
+Generate a professional security audit report document from findings in the current session.
+
+Example:
+
+```text
+Use $secure-webapp report to document the findings from the audit.
+```
+
+Expected behavior:
+
+- Requires a prior `$secure-webapp audit` or `quick-check` in the same session; if none has been run, prompts you to run one first
+- Reads `assets/report-template.md` in full before writing anything
+- Writes the report to `docs/security-audit-report-YYYY-MM-DD.md` in the project under review (or the repo root if `docs/` does not exist)
+- Does **not** dump the report into the chat — it is written to a file
+- Each confirmed finding includes: description, evidence (actual code), a detailed step-by-step attack scenario, remediation applied, and verification
+- False positives and open items are documented in dedicated sections
+- Runs quality gates before writing: finding counts match, attack scenarios are present, evidence is real code, tool output is from the session
+
+Report sections produced:
+
+- Executive Summary with severity counts table
+- Key risk statements
+- Scope (reviewed / not reviewed / methodology)
+- Risk rating matrix
+- Findings summary table
+- Full finding blocks (severity-ordered: Critical → High → Medium → Low → Info)
+- False positives
+- Open findings
+- Remediation roadmap
+- Appendix A: raw tool output (npm audit, ESLint, etc.)
+- Appendix B: files reviewed
+- Appendix C: revision history
+
+> [!NOTE]
+> The Attack Scenario section in each finding is mandatory and must be detailed enough for a non-technical stakeholder to understand the real-world consequence and for a developer to understand the exact exploit chain.
+
+### `$secure-webapp update`
+
+Self-update the local installation of this skill to the latest version.
+
+Example:
+
+```text
+Use $secure-webapp update to make sure you have the latest OWASP guidance.
+```
+
+Expected behavior:
+
+- Runs `npx --yes github:hov172/secure-webapp-skill --global` in the terminal
+- Replaces the installed `SKILL.md`, `references/`, and `assets/` files with the latest published versions
+- No manual steps required — the agent handles the update in-session
+
 ### `$secure-webapp maintain`
 
 Update or validate the skill package itself.
@@ -574,6 +635,7 @@ It contains:
 - `SKILL.md`
 - `references/`
 - `assets/audit-checklist.md`
+- `assets/report-template.md`
 - `assets/secure-webapp-small.svg`
 - `assets/secure-webapp-large.svg`
 - `agents/openai.yaml`
