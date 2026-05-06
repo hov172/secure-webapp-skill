@@ -45,6 +45,7 @@ Check in this order; load named references for depth only when needed.
 
 9. **Supply Chain** (`references/supply-chain.md`)
    Check lockfiles, dependency scan output, CI/CD, actions, artifacts. Findings: missing lockfiles, vulnerable deps, floating GitHub Actions, untrusted postinstall scripts, long-lived CI cloud secrets, no deploy approvals, no SBOM/provenance.
+   **Monorepo / multi-package projects:** run `npm audit --omit=dev --audit-level=high` (or the ecosystem equivalent) in **every directory that contains a lockfile** — e.g. `frontend/`, `backend/`, shared packages. A single-workspace audit is not sufficient; a clean backend audit does not mean the frontend is clean. Also verify the CI audit threshold matches what is run locally (e.g. `--audit-level=high` not `--audit-level=critical`).
 
 10. **Design / Business Logic** (`references/insecure-design.md`)
     Look for flaws implementation cannot patch locally. Findings: UI-only authorization, client-trusted state, no credential/key rotation path, single-tenant design reused as multi-tenant, server-side state machines missing, non-atomic money/quota/coupon flows, no abuse controls on signup/login/expensive endpoints.

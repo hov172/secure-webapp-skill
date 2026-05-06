@@ -63,7 +63,7 @@ Flag these in passing when seen in web code, with one concrete fix:
 14. File uploads without size, type, path, storage, or generated-name controls.
 15. Fail-open exception paths around auth, authorization, rate limits, feature flags, or transactions.
 16. Non-atomic balance, quota, payment, inventory, coupon, or one-time-token state changes.
-17. Floating CI actions/dependencies where pinning/lockfiles are expected.
+17. Floating CI actions/dependencies where pinning/lockfiles are expected. In monorepos and full-stack projects, dependency audits must run in every workspace (`frontend/`, `backend/`, etc.) — a clean audit in one package does not cover others. Flag if the CI audit threshold (`--audit-level`) is weaker than `high`.
 
 ## Behavior
 
