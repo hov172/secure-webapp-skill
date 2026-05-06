@@ -27,6 +27,7 @@ It is designed for AI workflows where security needs to be present by default, w
   - [`$secure-webapp audit`](#secure-webapp-audit)
   - [`$secure-webapp quick-check`](#secure-webapp-quick-check)
   - [`$secure-webapp harden`](#secure-webapp-harden)
+  - [`$secure-webapp remediate`](#secure-webapp-remediate)
   - [`$secure-webapp design-review`](#secure-webapp-design-review)
   - [`$secure-webapp report`](#secure-webapp-report)
   - [`$secure-webapp update`](#secure-webapp-update)
@@ -402,6 +403,37 @@ Expected behavior:
 - Add or update focused tests when useful
 - Explain security-relevant choices briefly
 
+### `$secure-webapp remediate`
+
+Run an iterative audit→fix loop until the codebase is clean.
+
+Example:
+
+```text
+Use $secure-webapp remediate to fix all security issues in this repo.
+```
+
+Expected behavior:
+
+- Reads `assets/remediate-checklist.md` in full before starting
+- Runs up to 8 audit→fix rounds
+- Each round: full audit → auto-apply all code-fixable findings (Critical first) → log open items → re-audit
+- Exits when code-fixable findings reach zero, or at round 8 — whichever comes first
+- Never prompts for confirmation except for product-decision-level changes (feature removal, breaking API change, file deletion)
+- Prints a final summary: rounds completed, findings fixed by severity, open items list, and any findings that hit the round cap
+
+Open items that cannot be auto-fixed are categorized as:
+
+- `no upstream patch` — vulnerable dependency with no available fix
+- `infra change required` — WAF rule, network policy, TLS config, hosting setting
+- `product decision required` — feature removal, API contract change, UX flow change
+- `arch change required` — fundamental design issue that local code cannot patch
+- `external action required` — third-party coordination, credential rotation, or vendor patch with no local workaround
+- `manual risk assessment` — ambiguous threat model, needs human judgment
+
+> [!NOTE]
+> `$secure-webapp remediate` is not a replacement for `$secure-webapp audit` — it is a superset that audits, fixes, and re-audits until clean. Use `audit` when you want findings without auto-applying fixes.
+
 ### `$secure-webapp design-review`
 
 Review a feature before implementation.
@@ -635,6 +667,7 @@ It contains:
 - `SKILL.md`
 - `references/`
 - `assets/audit-checklist.md`
+- `assets/remediate-checklist.md`
 - `assets/report-template.md`
 - `assets/secure-webapp-small.svg`
 - `assets/secure-webapp-large.svg`
