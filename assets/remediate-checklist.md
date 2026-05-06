@@ -23,7 +23,7 @@ Run a full audit using all 11 categories from `audit-checklist.md`. For each fin
 
 ### Step 2 — Fix
 
-Auto-apply all code-fixable findings. No confirmation required. Apply fixes in severity order: Critical → High → Medium → Low. For each fix applied, print one line:
+Auto-apply all code-fixable findings. No confirmation required (except for product-decision-level changes — see Rules). Apply fixes in severity order: Critical → High → Medium → Low. For each fix applied, print one line:
 
 ```
 Fixed [severity]: <short description> — <file:line>
@@ -43,10 +43,11 @@ Categories for "reason":
 - `product decision required` — feature removal, API contract change, UX flow change
 - `arch change required` — fundamental design issue that local code cannot patch
 - `manual risk assessment` — ambiguous threat model, needs human judgment
+- `external action required` — third-party coordination, credential rotation, or vendor patch with no local workaround
 
 ### Step 4 — Convergence Check
 
-Count remaining code-fixable findings.
+Count code-fixable findings that remain *after* applying all fixes in Step 2.
 
 - If **zero**: exit the loop. Print the final summary (see below).
 - If **non-zero and round < 8**: start the next round.
@@ -81,4 +82,4 @@ Needs Manual Attention (hit round cap):
 - Never mark a finding as fixed unless the code change was actually applied.
 - Never skip an audit category to save time — each round is a full audit.
 - Never prompt the user mid-loop for fixes. Only prompt if a fix would require deleting a file, removing a feature, or making a breaking API change — those are product decisions, not code fixes.
-- If the same open-item finding appears in multiple rounds, do not duplicate it in the log — update in place.
+- If the same open-item finding appears in multiple rounds, do not append a duplicate — skip it.
