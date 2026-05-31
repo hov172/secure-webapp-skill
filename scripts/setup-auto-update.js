@@ -59,8 +59,11 @@ function macSetup() {
         log(`Command  : ${npx} ${UPDATE_ARGS.join(' ')}`);
         return;
     }
+    const uid = process.getuid();
+    const domainTarget = `gui/${uid}/${LABEL}`;
     if (disable) {
-        try { execFileSync('launchctl', ['unload', plistPath]); } catch (_) {}
+        try { execFileSync('launchctl', ['bootout', domainTarget], { stdio: 'ignore' }); } catch (_) {}
+        try { execFileSync('launchctl', ['unload', plistPath], { stdio: 'ignore' }); } catch (_) {}
         if (fs.existsSync(plistPath)) fs.unlinkSync(plistPath);
         log(`Disabled launchd auto-update: ${plistPath}`);
         return;
@@ -88,8 +91,15 @@ ${calendar}
 `;
     fs.mkdirSync(path.dirname(plistPath), { recursive: true });
     fs.writeFileSync(plistPath, plist);
-    try { execFileSync('launchctl', ['unload', plistPath]); } catch (_) {}
-    execFileSync('launchctl', ['load', plistPath]);
+    // Prefer the modern bootstrap API; `launchctl load` is deprecated and a
+    // silent no-op on recent macOS. Fall back to `load -w` on older systems.
+    try { execFileSync('launchctl', ['bootout', domainTarget], { stdio: 'ignore' }); } catch (_) {}
+    try {
+        execFileSync('launchctl', ['bootstrap', `gui/${uid}`, plistPath], { stdio: 'ignore' });
+    } catch (_) {
+        try { execFileSync('launchctl', ['unload', plistPath], { stdio: 'ignore' }); } catch (_) {}
+        execFileSync('launchctl', ['load', '-w', plistPath], { stdio: 'ignore' });
+    }
     log(`Enabled ${cadence} auto-update via launchd: ${plistPath}`);
 }
 
