@@ -40,9 +40,14 @@ def frontmatter() -> dict[str, str]:
 def check_required_paths(skill_name: str) -> None:
     required = [
         "SKILL.md",
+        "AGENTS.md",
+        "GEMINI.md",
+        "VERSION",
         "LICENSE.txt",
         ".gitignore",
         "agents/openai.yaml",
+        "agents/gemini.yaml",
+        "agents/claude.yaml",
         "assets/audit-checklist.md",
         "assets/secure-webapp-small.svg",
         "assets/secure-webapp-large.svg",
@@ -53,6 +58,8 @@ def check_required_paths(skill_name: str) -> None:
         "scripts/sync_references.py",
         "scripts/manifest.json",
         "scripts/README.md",
+        "scripts/setup-auto-update.js",
+        "scripts/install.ps1",
         ".github/workflows/validate.yml",
         ".github/workflows/refresh-owasp.yml",
         ".github/workflows/release.yml",
@@ -83,18 +90,43 @@ def check_required_paths(skill_name: str) -> None:
         if f"$secure-webapp {option}" not in skill_text:
             fail(f"SKILL.md missing explicit invocation option: {option}")
 
-    openai = (ROOT / "agents/openai.yaml").read_text(encoding="utf-8")
-    if f"${skill_name}" not in openai:
-        fail("agents/openai.yaml default prompt must mention the skill as $skill-name")
-    if "allow_implicit_invocation: true" not in openai:
-        fail("agents/openai.yaml should explicitly allow implicit invocation")
-    for expected in (
-        'icon_small: "./assets/secure-webapp-small.svg"',
-        'icon_large: "./assets/secure-webapp-large.svg"',
-        'brand_color: "#2563EB"',
-    ):
-        if expected not in openai:
-            fail(f"agents/openai.yaml missing {expected}")
+    for agent_manifest in ("agents/openai.yaml", "agents/gemini.yaml", "agents/claude.yaml"):
+        manifest_text = (ROOT / agent_manifest).read_text(encoding="utf-8")
+        if f"${skill_name}" not in manifest_text:
+            fail(f"{agent_manifest} default prompt must mention the skill as $skill-name")
+        if "allow_implicit_invocation: true" not in manifest_text:
+            fail(f"{agent_manifest} should explicitly allow implicit invocation")
+        for expected in (
+            'icon_small: "./assets/secure-webapp-small.svg"',
+            'icon_large: "./assets/secure-webapp-large.svg"',
+            'brand_color: "#2563EB"',
+        ):
+            if expected not in manifest_text:
+                fail(f"{agent_manifest} missing {expected}")
+
+    for agent_doc in ("AGENTS.md", "GEMINI.md"):
+        doc_text = (ROOT / agent_doc).read_text(encoding="utf-8")
+        if skill_name not in doc_text:
+            fail(f"{agent_doc} must name the {skill_name} skill")
+        if f"${skill_name}" not in doc_text:
+            fail(f"{agent_doc} should document the ${skill_name} invocation modes")
+
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+    if not version:
+        fail("VERSION file is empty")
+    pkg_path = ROOT / "package.json"
+    if pkg_path.exists():
+        pkg_version = json.loads(pkg_path.read_text(encoding="utf-8")).get("version")
+        if pkg_version != version:
+            fail(f"package.json version ({pkg_version}) does not match VERSION ({version})")
+    installer = (ROOT / "bin/install.js").read_text(encoding="utf-8")
+    for token in (".codex", ".gemini", "VERSION", "--force", "--check"):
+        if token not in installer:
+            fail(f"bin/install.js missing platform/version handling: {token}")
+    autoupdate = (ROOT / "scripts/setup-auto-update.js").read_text(encoding="utf-8")
+    for token in ("darwin", "win32", "launchd", "schtasks", "--disable", "--check"):
+        if token not in autoupdate:
+            fail(f"scripts/setup-auto-update.js missing platform handling: {token}")
 
 
 def check_manifest() -> None:
@@ -134,6 +166,11 @@ def check_hygiene() -> None:
             "Install for Claude: one project",
             "Install for Codex: all projects",
             "Install for Codex: one project",
+            "Install for Gemini CLI: all projects",
+            "Install for Gemini CLI: one project",
+            "Install for other AI agents",
+            "Install on Windows",
+            "Automatic Updates",
             "Verify installation",
         ):
             if expected not in text:
@@ -195,12 +232,18 @@ def check_package(skill_name: str) -> None:
     prefix = f"{skill_name}/"
     for needed in (
         f"{prefix}SKILL.md",
+        f"{prefix}AGENTS.md",
+        f"{prefix}GEMINI.md",
+        f"{prefix}VERSION",
         f"{prefix}LICENSE.txt",
         f"{prefix}agents/openai.yaml",
+        f"{prefix}agents/gemini.yaml",
+        f"{prefix}agents/claude.yaml",
         f"{prefix}scripts/check_skill.py",
         f"{prefix}scripts/package_skill.py",
         f"{prefix}scripts/release_checksums.py",
         f"{prefix}scripts/refresh.py",
+        f"{prefix}scripts/setup-auto-update.js",
         f"{prefix}assets/audit-checklist.md",
         f"{prefix}assets/secure-webapp-small.svg",
         f"{prefix}assets/secure-webapp-large.svg",

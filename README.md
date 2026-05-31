@@ -13,7 +13,7 @@
 
 ---
 
-`secure-webapp` is a Claude/Codex/Gemini skill for applying practical security guidance while building, editing, reviewing, or hardening web applications.
+`secure-webapp` is a Claude/Codex/Gemini skill for applying practical security guidance while building, editing, reviewing, or hardening web applications. It also works with any other AI agent that loads skills from a directory or reads an `AGENTS.md` / `GEMINI.md` instruction file.
 
 It is designed for AI workflows where security needs to be present by default, without turning every coding task into a long security lecture. The skill helps an agent notice risky patterns, choose safer implementations, and produce focused security review findings.
 
@@ -81,6 +81,25 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-ski
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --gemini
 ```
 
+### Quick Install on Windows (PowerShell)
+
+On Windows the `npx` commands above work as-is (Node.js required). If you prefer not to use Node.js, use the PowerShell installer, which downloads the latest release and version-checks before unpacking:
+
+```powershell
+# Install for Claude (default)
+irm https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.ps1 | iex
+```
+
+To target Codex or Gemini, or to force a reinstall, download the script and pass parameters:
+
+```powershell
+irm https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.ps1 -OutFile install.ps1
+pwsh -File install.ps1 -Client codex
+pwsh -File install.ps1 -Client gemini -Force
+```
+
+Installs go to `%USERPROFILE%\.claude\skills\secure-webapp` (or `.codex` / `.gemini`). Add `-Local` to install into the current directory instead.
+
 ### Manual Install
 
 > [!NOTE]
@@ -129,6 +148,9 @@ unzip secure-webapp.skill -d /path/to/project/.claude/skills
 ```
 
 Use project-local installation when the skill should only affect one repository.
+
+> [!NOTE]
+> The skill ships with `AGENTS.md` and `GEMINI.md` at its root so agents that read those instruction files (Codex, Gemini CLI, and others) pick up *when* and *how* to use the skill. Claude Code discovers it from `SKILL.md` automatically.
 
 #### Install for Codex: all projects
 
@@ -200,6 +222,23 @@ mkdir -p /path/to/project/.gemini/skills
 unzip secure-webapp.skill -d /path/to/project/.gemini/skills
 ```
 
+#### Install for other AI agents
+
+Any agent that loads skills from a directory, or that reads an `AGENTS.md` / `GEMINI.md` instruction file, can use this skill.
+
+1. Copy the skill into a location your agent reads. The packaged archive unzips to a `secure-webapp/` folder containing `SKILL.md`, `references/`, `assets/`, `agents/`, `AGENTS.md`, and `GEMINI.md`:
+
+   ```sh
+   unzip secure-webapp.skill -d /path/your/agent/reads
+   ```
+
+2. Point your agent at it:
+   - **Codex** and other `AGENTS.md`-aware tools read `AGENTS.md`.
+   - **Gemini CLI** reads `GEMINI.md`.
+   - Agents with a skills loader read `secure-webapp/SKILL.md` directly.
+
+3. The guidance in `SKILL.md` uses Claude Code tool names. On other agents, map them to your equivalents (file read, file edit/write, shell, search) — the security content itself is platform-independent.
+
 ### Verify installation
 
 Ask the agent to use the skill explicitly:
@@ -228,7 +267,47 @@ Example:
 Use $secure-webapp update to make sure you have the latest OWASP guidance.
 ```
 
-The skill will run `npx --yes github:hov172/secure-webapp-skill --global` in the terminal to pull and install the newest version automatically.
+The skill will run `npx --yes github:hov172/secure-webapp-skill --global` in the terminal. The installer is **platform-aware and version-checked**:
+
+- It auto-detects every client already installed (`.claude`, `.codex`, `.gemini`) and updates each one — so a Codex or Gemini user updates their own install, not a stray Claude copy.
+- It compares the installed `VERSION` against the published version and **skips clients that are already current**, printing `already up to date` instead of reinstalling.
+
+Useful flags:
+
+```sh
+# Update only one client
+npx --yes github:hov172/secure-webapp-skill --global --codex
+npx --yes github:hov172/secure-webapp-skill --global --gemini
+
+# Report what would change without touching any files
+npx --yes github:hov172/secure-webapp-skill --global --check
+
+# Reinstall even if the version matches
+npx --yes github:hov172/secure-webapp-skill --global --force
+```
+
+The bash installer (`scripts/install.sh`) applies the same version check and also accepts `--force`.
+
+> [!NOTE]
+> By default this is check-on-demand: installed copies stay frozen until you run `$secure-webapp update`, the installer, or reinstall the `.skill` archive — at which point the version check decides whether anything actually needs to change. To run the check automatically in the background, see [Automatic Updates](#automatic-updates-optional) below.
+
+### Automatic Updates (optional)
+
+For unattended updates, register a background scheduler with the cross-platform helper. It runs the version-checked installer on a timer — on **macOS** (launchd), **Windows** (Task Scheduler), or **Linux** (cron) — which only reinstalls when a newer version is published.
+
+```sh
+# Preview what would be scheduled (changes nothing)
+node scripts/setup-auto-update.js --check
+
+# Enable weekly (default) or daily background checks
+node scripts/setup-auto-update.js
+node scripts/setup-auto-update.js --daily
+
+# Turn it off
+node scripts/setup-auto-update.js --disable
+```
+
+On Windows, run the same commands in PowerShell or Command Prompt (Node.js required); the job is created in Task Scheduler as `secure-webapp-update`. This is the only true background option — the agents themselves do not poll; the scheduler runs the installer and the version check decides whether anything changes.
 
 ## What This Skill Is For
 
@@ -665,13 +744,18 @@ secure-webapp.skill
 It contains:
 
 - `SKILL.md`
+- `AGENTS.md`
+- `GEMINI.md`
+- `VERSION`
 - `references/`
 - `assets/audit-checklist.md`
 - `assets/remediate-checklist.md`
 - `assets/report-template.md`
 - `assets/secure-webapp-small.svg`
 - `assets/secure-webapp-large.svg`
+- `agents/claude.yaml`
 - `agents/openai.yaml`
+- `agents/gemini.yaml`
 - `scripts/`
 - `license.txt`
 
@@ -683,6 +767,7 @@ It does not contain:
 - `.gitignore`
 - `scripts/README.md`
 - `scripts/install.sh`
+- `scripts/install.ps1`
 - `bin/install.js`
 - `SHA256SUMS` / `SHA256SUMS.asc`
 - Python cache files

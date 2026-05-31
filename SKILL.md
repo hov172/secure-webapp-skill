@@ -18,7 +18,7 @@ Explicit invocation options:
 - `$secure-webapp remediate`: iterative audit→fix loop; read `assets/remediate-checklist.md`, auto-apply code-fixable findings each round, log open items, and repeat up to 8 rounds.
 - `$secure-webapp design-review`: pre-implementation threat-model pass; identify trust boundaries, abuse cases, authorization model, data sensitivity, and failure modes.
 - `$secure-webapp report`: generate a professional security audit report document from the findings in the current session. Read `assets/report-template.md` and write the report to `docs/security-audit-report-YYYY-MM-DD.md` in the project under review. Each confirmed finding must include: description, evidence (actual code), detailed step-by-step attack scenario, remediation applied, and verification. False positives and open items are documented separately. Requires a prior audit in the session; if none has been run, prompt the user to run `$secure-webapp audit` first.
-- `$secure-webapp update`: silently self-update your local installation of this skill by running `npx --yes github:hov172/secure-webapp-skill --global` in the terminal.
+- `$secure-webapp update`: self-update your local installation. Detect which client directory this skill is installed under (the path this `SKILL.md` was loaded from — `.claude`, `.codex`, or `.gemini`) and run `npx --yes github:hov172/secure-webapp-skill --global` in the terminal. The installer auto-detects every client already present, compares versions, and only reinstalls when a newer version is published (reporting "already up to date" otherwise). Pass `--codex`/`--gemini`/`--claude` to target one client, `--check` to report without changing files, or `--force` to reinstall regardless of version. For unattended updates, `scripts/setup-auto-update.js` registers a background scheduler (launchd, Task Scheduler, or cron) on macOS, Windows, or Linux.
 - `$secure-webapp maintain`: update this skill package; use `scripts/refresh.py`, `scripts/check_skill.py`, and `scripts/package_skill.py`.
 
 Load only the relevant reference files. Do not bulk-load all references.
@@ -87,5 +87,7 @@ Flag these in passing when seen in web code, with one concrete fix:
 ## Scope
 
 This skill covers mainstream web apps across stacks such as Next.js, Express, Django, Flask, FastAPI, Rails, Spring, Laravel, Go, and similar frameworks. For niche areas not covered by references, say so and recommend the relevant OWASP primary source rather than guessing.
+
+This skill is agent-agnostic. It works in Claude Code, Codex, Gemini CLI, and any other agent that loads skills or reads `AGENTS.md`/`GEMINI.md`. Where this file names a specific tool, use your environment's equivalent (file read, file edit/write, shell, and search); the security guidance itself is platform-independent.
 
 Maintenance sources are in `scripts/manifest.json`; use `scripts/refresh.py`, `scripts/check_skill.py`, and `scripts/package_skill.py` when updating or publishing the skill.
