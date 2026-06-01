@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-05-25T10:35:27.870037+00:00",
+  "last_run": "2026-06-01T10:46:59.582322+00:00",
   "sources": {
     "asvs_5_0": {
       "base_url": "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/",
@@ -87,7 +87,7 @@
           "sha256": "cf8f887f2b586f7c75445cb8de57edeb289253873291405d4bbeb82c34edcd0a"
         },
         "DOM_based_XSS_Prevention_Cheat_Sheet.md": {
-          "sha256": "fc2ff08ab70b9ae09c3c2835bf58324bb119aaf323a076e95166f2575cebb877"
+          "sha256": "0ebc627785e5da3125917a672cd2416b224e7f110a8f9f93a0c6fd71c1189e3c"
         },
         "Dependency_Graph_SBOM_Cheat_Sheet.md": {
           "sha256": "46edbd8974536a41b7b764b49490c965004e4d7bb021a5733f24f5f09c3e214c"
@@ -117,7 +117,7 @@
           "sha256": "210c95345ef2abbcd9d079d9a9fc1d3408769f5c72a5ef5a4e6aba7956031bc2"
         },
         "Input_Validation_Cheat_Sheet.md": {
-          "sha256": "ca2f071e27ac617fcb0a9ee98b3c44a18c2305f2b85360560dab43ca9bc04df3"
+          "sha256": "474509f8bc6d06dab110bad0d0d5055cc9c6f2a63d2f464ce2966be634246772"
         },
         "Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.md": {
           "sha256": "831253a01eb92bda3fbcdd166f00eab9c071c44c0312b625e09497a3b403f615"
@@ -204,7 +204,7 @@
           "sha256": "2fbfffaa2b9d734271d7e84ccb550290858586171a5807db7b2bf13bf24aa093"
         },
         "Transport_Layer_Security_Cheat_Sheet.md": {
-          "sha256": "eee53694baefaf878d2535406fa4f5313b9bce92cb685d6959d4c1645980a013"
+          "sha256": "fb0e676983f7df4dd0e8cbd1f0cab9638317a19c0ea95e13db091a0a030d2f3e"
         },
         "Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md": {
           "sha256": "14e3d3509c6034f98a505bf4c86cac8b156f237e464eb8f93bb232f018f97d4b"
@@ -269,7 +269,7 @@
           "sha256": "632c9b4562d64dd5fa2f8cfd99b149a08a5769b472271f3f1da5ecf86fcb5315"
         },
         "document/4-Web_Application_Security_Testing/04-Authentication_Testing/11-Testing_Multi-Factor_Authentication.md": {
-          "sha256": "f3cf60a3c56c46329bb53677a652f934220658754234b7836584ea328e3dad9f"
+          "sha256": "d9d18327094fca2d4b85ba960b793ac2f455c16f579e25147564f705d9ec89e6"
         },
         "document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/01-Testing_for_Reflected_Cross_Site_Scripting.md": {
           "sha256": "e718d276c846922647fd3691abee0331f4bc36a74733fa3debc0dacbecfef111"
