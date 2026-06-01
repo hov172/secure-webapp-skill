@@ -25,7 +25,10 @@ curl -sL "https://github.com/hov172/secure-webapp-skill/releases/latest/download
 
 # Compare the packaged version with what is already installed and skip when current.
 NEW_VER=$(unzip -p "$TEMP_DIR/secure-webapp.skill" secure-webapp/VERSION 2>/dev/null | tr -d '[:space:]' || true)
-CUR_VER=$(tr -d '[:space:]' < "$INSTALL_DIR/secure-webapp/VERSION" 2>/dev/null || true)
+CUR_VER=""
+if [ -f "$INSTALL_DIR/secure-webapp/VERSION" ]; then
+    CUR_VER=$(tr -d '[:space:]' < "$INSTALL_DIR/secure-webapp/VERSION")
+fi
 
 if [ "$FORCE" -eq 0 ] && [ -n "$NEW_VER" ] && [ "$NEW_VER" = "$CUR_VER" ]; then
     echo "Already up to date (version $CUR_VER) at $INSTALL_DIR/secure-webapp"
