@@ -61,6 +61,9 @@ npx github:hov172/secure-webapp-skill --codex
 npx github:hov172/secure-webapp-skill --gemini
 ```
 
+> [!NOTE]
+> Codex and Gemini do not auto-load a `skills/` folder, so the installer also wires their instruction file — `~/.codex/AGENTS.md` for Codex, `~/.gemini/GEMINI.md` for Gemini — with a managed pointer block to the installed `SKILL.md` (Gemini uses an `@import`). This makes the skill active in every session. Pass `--no-wire` to skip it. Claude needs no wiring — it auto-discovers `~/.claude/skills`.
+
 ### Quick Install via Bash
 
 For environments without Node.js, you can install the skill via bash:
@@ -587,6 +590,7 @@ Expected behavior:
 - Is **version-checked**: compares the installed `VERSION` against the published version and skips clients that are already current (`already up to date`)
 - Replaces the installed `SKILL.md`, `AGENTS.md`, `GEMINI.md`, `references/`, `assets/`, and `VERSION` with the latest published versions
 - Accepts `--codex` / `--gemini` / `--claude` (target one client), `--check` (report only), and `--force` (reinstall regardless of version)
+- For Codex/Gemini, refreshes the `AGENTS.md` / `GEMINI.md` discovery pointer so the skill stays active (skip with `--no-wire`)
 - No manual steps required — the agent handles the update in-session
 
 For unattended updates, see [Automatic Updates](#automatic-updates-optional).

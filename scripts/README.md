@@ -73,7 +73,7 @@ The package script excludes `_sources/` caches, the bootstrap installers (`insta
 
 ## Installers
 
-End-user installers. All are version-checked: they skip installation when the installed copy already matches the published version (pass a force flag to override).
+End-user installers. All are version-checked: they skip installation when the installed copy already matches the published version (pass a force flag to override). For Codex and Gemini they also wire the agent's `AGENTS.md` / `GEMINI.md` to point at the installed `SKILL.md` (skip with `--no-wire`); Claude auto-discovers `~/.claude/skills` and needs no wiring.
 
 ### `bin/install.js`
 

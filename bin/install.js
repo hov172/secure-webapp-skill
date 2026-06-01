@@ -8,12 +8,20 @@ const args = process.argv.slice(2);
 const isGlobal = args.includes('--global') || args.includes('-g');
 const force = args.includes('--force');
 const checkOnly = args.includes('--check');
+const noWire = args.includes('--no-wire');
 
 // Supported AI-agent clients and their config directory names.
 const CLIENTS = {
     claude: '.claude',
     codex: '.codex',
     gemini: '.gemini',
+};
+
+// Per-client instruction file the agent reads to discover the skill.
+// Claude Code auto-discovers ~/.claude/skills, so it needs no wiring.
+const DISCOVERY = {
+    codex: 'AGENTS.md',
+    gemini: 'GEMINI.md',
 };
 
 const sourceDir = path.join(__dirname, '..');
@@ -29,6 +37,9 @@ const itemsToCopy = [
     'agents',
     'LICENSE.txt',
 ];
+
+const BLOCK_BEGIN = '<!-- secure-webapp:begin (managed by the secure-webapp installer) -->';
+const BLOCK_END = '<!-- secure-webapp:end -->';
 
 function readVersion(file) {
     try {
@@ -108,6 +119,63 @@ function installTo(targetDir, srcVer) {
     console.log(`  installed ${srcVer || ''} (was ${installedVer || 'not installed'}) - ${targetDir}`);
 }
 
+function escapeRe(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Codex and Gemini do not auto-load ~/.<client>/skills, so point their
+// instruction file (AGENTS.md / GEMINI.md) at the installed SKILL.md. Global
+// installs wire the client config dir; project-local installs wire the project
+// root file the agent reads.
+function discoveryFileFor(client, base) {
+    return isGlobal
+        ? path.join(base, CLIENTS[client], DISCOVERY[client])
+        : path.join(base, DISCOVERY[client]);
+}
+
+function discoveryBlock(client, discoveryFile, targetDir) {
+    const rel = path.relative(path.dirname(discoveryFile), path.join(targetDir, 'SKILL.md')) || 'SKILL.md';
+    const relPosix = rel.split(path.sep).join('/');
+    const trigger =
+        'web-app code or design involving auth, sessions, tokens (JWT/OAuth/OIDC), user input, ' +
+        'DB queries, file uploads, API endpoints, cookies/CORS/CSP/CSRF, security headers, secrets, ' +
+        'redirects, SSRF, logging, dependencies, or threat modeling';
+    const modes = '`$secure-webapp audit | quick-check | harden | remediate | design-review | report | update | maintain`';
+    // Gemini supports `@path` context imports; Codex reads the file directly.
+    const importLine = client === 'gemini' ? `@${relPosix}\n\n` : '';
+    return [
+        BLOCK_BEGIN,
+        '## secure-webapp skill',
+        '',
+        `${importLine}The **secure-webapp** skill (OWASP-grounded web-app security guidance) is installed at \`${relPosix}\`. ` +
+            `When working on ${trigger}, read that \`SKILL.md\` and follow it, loading only the \`references/*.md\` it routes to.`,
+        '',
+        `Explicit modes: ${modes}.`,
+        BLOCK_END,
+        '',
+    ].join('\n');
+}
+
+function wireDiscovery(client, base, targetDir) {
+    if (!DISCOVERY[client]) return; // Claude auto-discovers; nothing to wire.
+    const file = discoveryFileFor(client, base);
+    const block = discoveryBlock(client, file, targetDir);
+    let existing = '';
+    try {
+        existing = fs.readFileSync(file, 'utf8');
+    } catch (_) {}
+    const re = new RegExp(`${escapeRe(BLOCK_BEGIN)}[\\s\\S]*?${escapeRe(BLOCK_END)}\\n?`);
+    let next;
+    if (re.test(existing)) {
+        next = existing.replace(re, block);
+    } else {
+        next = existing ? existing.replace(/\s*$/, '\n\n') + block : block;
+    }
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, next);
+    console.log(`  wired discovery -> ${file}`);
+}
+
 function main() {
     const base = isGlobal ? os.homedir() : process.cwd();
     const srcVer = sourceVersion();
@@ -126,7 +194,11 @@ function main() {
 
     try {
         for (const client of clients) {
-            installTo(targetDirFor(client, base), srcVer);
+            const targetDir = targetDirFor(client, base);
+            installTo(targetDir, srcVer);
+            if (!checkOnly && !noWire) {
+                wireDiscovery(client, base, targetDir);
+            }
         }
         if (checkOnly) {
             console.log('\nCheck complete. Re-run without --check to apply updates.');
