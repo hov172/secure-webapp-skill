@@ -819,7 +819,7 @@ Repository: <https://github.com/hov172/secure-webapp-skill>
 
 ## License and Attribution
 
-See `license.txt` for OWASP attribution and license notes.
+See `LICENSE.txt` for OWASP attribution and license notes.
 
 OWASP and OWASP project names are trademarks of the OWASP Foundation. This skill is not an official OWASP project unless explicitly published as one.
 

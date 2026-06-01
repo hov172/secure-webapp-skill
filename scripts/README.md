@@ -77,7 +77,7 @@ End-user installers. All are version-checked: they skip installation when the in
 
 ### `bin/install.js`
 
-Node / `npx` installer (macOS, Windows, Linux). Auto-detects which clients (`.claude`, `.codex`, `.gemini`) are already installed and updates each, copying all skill files including `AGENTS.md`, `GEMINI.md`, and `VERSION`. Flags: `--global`, `--claude` / `--codex` / `--gemini`, `--check`, `--force`.
+Node / `npx` installer (macOS, Windows, Linux). Auto-detects which clients (`.claude`, `.codex`, `.gemini`) are already installed and updates each, copying all skill files including `AGENTS.md`, `GEMINI.md`, and `VERSION`. Flags: `--global`, `--claude` / `--codex` / `--gemini`, `--check`, `--force`, `--no-wire`.
 
 ```sh
 npx --yes github:hov172/secure-webapp-skill --global
@@ -85,7 +85,7 @@ npx --yes github:hov172/secure-webapp-skill --global
 
 ### `install.sh`
 
-Bash installer for macOS and Linux (downloads the latest released `secure-webapp.skill`). Flags: `--local`, `--codex`, `--gemini`, `--local-codex`, `--local-gemini`, `--force`.
+Bash installer for macOS and Linux (downloads the latest released `secure-webapp.skill`). Flags: `--local`, `--codex`, `--gemini`, `--local-codex`, `--local-gemini`, `--force`, `--no-wire`.
 
 ```sh
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --codex
@@ -99,7 +99,7 @@ PowerShell installer for Windows (no Node.js required).
 pwsh -File scripts/install.ps1 -Client gemini -Force
 ```
 
-Parameters: `-Client claude|codex|gemini`, `-Local`, `-Force`.
+Parameters: `-Client claude|codex|gemini`, `-Local`, `-Force`, `-NoWire`.
 
 ## Auto-update
 
