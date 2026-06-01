@@ -583,8 +583,13 @@ Use $secure-webapp update to make sure you have the latest OWASP guidance.
 Expected behavior:
 
 - Runs `npx --yes github:hov172/secure-webapp-skill --global` in the terminal
-- Replaces the installed `SKILL.md`, `references/`, and `assets/` files with the latest published versions
+- Is **platform-aware**: auto-detects every installed client (`.claude`, `.codex`, `.gemini`) and updates each, instead of assuming Claude
+- Is **version-checked**: compares the installed `VERSION` against the published version and skips clients that are already current (`already up to date`)
+- Replaces the installed `SKILL.md`, `AGENTS.md`, `GEMINI.md`, `references/`, `assets/`, and `VERSION` with the latest published versions
+- Accepts `--codex` / `--gemini` / `--claude` (target one client), `--check` (report only), and `--force` (reinstall regardless of version)
 - No manual steps required — the agent handles the update in-session
+
+For unattended updates, see [Automatic Updates](#automatic-updates-optional).
 
 ### `$secure-webapp maintain`
 
@@ -716,7 +721,7 @@ The workflow runs weekly on Monday at 09:00 UTC and can also be started manually
 This is the no-key automation path: OWASP source files are refreshed automatically, the curated `references/*.md` files are deterministically synced from the refreshed cache, and the distributable package is rebuilt from the updated tree.
 
 > [!IMPORTANT]
-> The skill content changes only through this refresh pipeline. Runtime installs do not self-update inside your agent; they update when you reinstall the rebuilt `.skill` archive or refresh the source folder via `npx` or `bash`.
+> The skill content changes only through this refresh pipeline. Runtime installs do not self-update inside your agent; they update when you reinstall via `npx` / `bash` / PowerShell, run `$secure-webapp update`, or enable [Automatic Updates](#automatic-updates-optional). Each path is version-checked, so it only reinstalls when a newer version is published.
 
 The repository can keep `_sources/` in Git history for maintenance. The runtime `.skill` package still excludes `_sources/` so token usage stays low.
 
@@ -732,6 +737,19 @@ git push origin vX.Y.Z
 ```
 
 The release workflow builds `secure-webapp.skill`, generates `SHA256SUMS`, validates the package, and uploads both artifacts to the GitHub release.
+
+### Versioning and Installers
+
+`VERSION` (repository root) is the single source of truth for the skill version and **must match `version` in `package.json`** — `scripts/check_skill.py` fails the build if they drift. Bump both when publishing user-visible changes so existing installs detect the update via the version check.
+
+The version is read by the cross-platform installers and updater:
+
+| Script | Platform | Purpose |
+|---|---|---|
+| `bin/install.js` | macOS / Windows / Linux | Node/`npx` installer; auto-detects clients, version-checks, copies all skill files |
+| `scripts/install.sh` | macOS / Linux | Bash installer for environments without Node.js |
+| `scripts/install.ps1` | Windows | PowerShell installer for environments without Node.js |
+| `scripts/setup-auto-update.js` | macOS / Windows / Linux | Registers an opt-in background updater (launchd / Task Scheduler / cron) |
 
 ### Packaging
 
@@ -756,8 +774,8 @@ It contains:
 - `agents/claude.yaml`
 - `agents/openai.yaml`
 - `agents/gemini.yaml`
-- `scripts/`
-- `license.txt`
+- `scripts/` (including `setup-auto-update.js`)
+- `LICENSE.txt`
 
 It does not contain:
 

@@ -1,6 +1,6 @@
 # Maintenance Scripts
 
-This directory contains the tooling for keeping the skill current with upstream OWASP material and packaging it consistently.
+This directory contains the tooling for keeping the skill current with upstream OWASP material and packaging it consistently. It also holds the end-user installers and the auto-update helper. The Node `npx` installer itself lives at `bin/install.js`.
 
 ## The workflow
 
@@ -65,7 +65,54 @@ Build the distributable archive:
 python scripts/package_skill.py
 ```
 
-The package script excludes `_sources/` caches and local build artifacts. `_sources/` is maintainer input, not runtime skill content.
+The package script excludes `_sources/` caches, the bootstrap installers (`install.sh`, `install.ps1`, `bin/install.js`), and local build artifacts. `_sources/` is maintainer input, not runtime skill content.
+
+## Versioning
+
+`VERSION` (repository root) is the single source of truth for the skill version and **must match `version` in `package.json`** — `check_skill.py` fails the build if they drift. Bump both when publishing user-visible changes so existing installs detect the update via the version check.
+
+## Installers
+
+End-user installers. All are version-checked: they skip installation when the installed copy already matches the published version (pass a force flag to override).
+
+### `bin/install.js`
+
+Node / `npx` installer (macOS, Windows, Linux). Auto-detects which clients (`.claude`, `.codex`, `.gemini`) are already installed and updates each, copying all skill files including `AGENTS.md`, `GEMINI.md`, and `VERSION`. Flags: `--global`, `--claude` / `--codex` / `--gemini`, `--check`, `--force`.
+
+```sh
+npx --yes github:hov172/secure-webapp-skill --global
+```
+
+### `install.sh`
+
+Bash installer for macOS and Linux (downloads the latest released `secure-webapp.skill`). Flags: `--local`, `--codex`, `--gemini`, `--local-codex`, `--local-gemini`, `--force`.
+
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --codex
+```
+
+### `install.ps1`
+
+PowerShell installer for Windows (no Node.js required).
+
+```powershell
+pwsh -File scripts/install.ps1 -Client gemini -Force
+```
+
+Parameters: `-Client claude|codex|gemini`, `-Local`, `-Force`.
+
+## Auto-update
+
+### `setup-auto-update.js`
+
+Registers (or removes) an opt-in background job that runs the version-checked installer on a timer — launchd on macOS, Task Scheduler on Windows, cron on Linux.
+
+```sh
+node scripts/setup-auto-update.js            # enable weekly
+node scripts/setup-auto-update.js --daily    # enable daily
+node scripts/setup-auto-update.js --check    # show the plan, change nothing
+node scripts/setup-auto-update.js --disable  # remove
+```
 
 ## CI integration (optional)
 
