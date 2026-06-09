@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
+      - uses: actions/checkout@1cce3390c2bfda521930d01229c073c7ff920824
         with:
           persist-credentials: false
       - run: python3 -m py_compile scripts/refresh.py scripts/check_skill.py scripts/package_skill.py scripts/release_checksums.py scripts/sync_references.py
