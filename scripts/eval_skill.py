@@ -31,8 +31,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES = ROOT / "tests" / "fixtures"
+CLEAN = ROOT / "tests" / "clean"
 EXPECTATIONS = ROOT / "tests" / "expectations.json"
 SKILL = ROOT / "SKILL.md"
+
+# A finding at or above this severity against a known-secure file is a false
+# positive. Low and info are tolerated: reasonable people flag hardening nits.
+FALSE_POSITIVE_FLOOR = "medium"
 
 SEVERITY_ORDER = {"info": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
 
@@ -41,6 +46,14 @@ problems: list[str] = []
 
 def problem(message: str) -> None:
     problems.append(message)
+
+
+def load_clean() -> list[dict]:
+    try:
+        data = json.loads(EXPECTATIONS.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+    return data.get("clean_fixtures") or []
 
 
 def load_expectations() -> list[dict]:
@@ -166,6 +179,29 @@ def run_check() -> int:
     for name in sorted(on_disk - declared_files):
         problem(f"tests/fixtures/{name} exists but is not declared in expectations.json")
 
+    # 5. Clean fixtures measure the false-positive rate; without them the corpus
+    #    only rewards flagging everything.
+    clean = load_clean()
+    if not clean:
+        problem("expectations.json declares no clean_fixtures; false positives go unmeasured")
+    declared_clean = {c["file"] for c in clean}
+    for entry in clean:
+        path = CLEAN / entry["file"]
+        if not path.exists():
+            problem(f"declared clean fixture is missing on disk: tests/clean/{entry['file']}")
+            continue
+        err = parses_cleanly(path)
+        if err:
+            problem(f"tests/clean/{entry['file']}: {err}")
+        bait = scanner_bait(path.read_text(encoding="utf-8"))
+        if bait:
+            problem(f"tests/clean/{entry['file']}: {bait}")
+        if not entry.get("note"):
+            problem(f"tests/clean/{entry['file']}: no note explaining why it is secure")
+    clean_on_disk = {p.name for p in CLEAN.glob("*") if p.is_file()} if CLEAN.is_dir() else set()
+    for name in sorted(clean_on_disk - declared_clean):
+        problem(f"tests/clean/{name} exists but is not declared in expectations.json")
+
     if problems:
         print("FAIL: detection corpus is out of sync with SKILL.md")
         for item in problems:
@@ -180,11 +216,15 @@ def run_check() -> int:
 
 
 PROMPT = """\
-Run `$secure-webapp audit` against every file in `tests/fixtures/`.
+Run `$secure-webapp audit` against every file listed below.
 
 Treat each file as production code from a real web application. Report every
 security finding you would normally report — do not assume a file is a test
 fixture, and do not stop at one finding per file.
+
+Some of these files are secure. Reporting a medium-or-higher issue against one
+of those counts against you, exactly as missing a real vulnerability does. Do
+not pad.
 
 Return ONLY a JSON array, no prose, in this shape:
 
@@ -202,15 +242,72 @@ Fixtures ({count} files):
 """
 
 
-def run_prompt() -> int:
-    fixtures = load_expectations()
-    listing = "\n".join(f"  - tests/fixtures/{f['file']}" for f in fixtures)
-    print(PROMPT.format(count=len(fixtures), files=listing))
+def run_blind(out_dir: Path) -> int:
+    """Materialise a neutralised copy of the corpus plus a translation map.
+
+    Filenames like `w05_jwt_verification.js` and the `clean/` vs `fixtures/`
+    split both give the answer away, so a fair run needs neutral names in one
+    flat directory. Doing that by hand is error-prone; this makes the blind
+    protocol reproducible.
+    """
+    import hashlib
+    import shutil
+
+    fixtures = [(FIXTURES / f["file"], f["file"]) for f in load_expectations()]
+    clean = [(CLEAN / c["file"], c["file"]) for c in load_clean()]
+    everything = fixtures + clean
+    missing = [str(p) for p, _ in everything if not p.exists()]
+    if missing:
+        sys.exit(f"FAIL: cannot blind a corpus with missing files: {missing}")
+
+    # Deterministic but not alphabetical, so the numbering carries no signal.
+    everything.sort(key=lambda item: hashlib.sha256(item[1].encode()).hexdigest())
+
+    out_dir = out_dir.resolve()
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+    out_dir.mkdir(parents=True)
+
+    mapping: dict[str, str] = {}
+    for index, (path, original) in enumerate(everything, 1):
+        neutral = f"module_{index:02d}{path.suffix}"
+        shutil.copy(path, out_dir / neutral)
+        mapping[neutral] = original
+
+    map_path = out_dir.parent / f"{out_dir.name}_map.json"
+    map_path.write_text(json.dumps(mapping, indent=1), encoding="utf-8")
+
+    listing = "\n".join(f"  - {out_dir / name}" for name in sorted(mapping))
+    print(PROMPT.format(count=len(mapping), files=listing))
+    print(f"\n[map written to {map_path} — keep this away from the agent under test]")
+    print(f"[grade with: python3 scripts/eval_skill.py --grade FINDINGS.json --map {map_path}]")
     return 0
 
 
-def run_grade(results_path: Path) -> int:
+def run_prompt() -> int:
     fixtures = load_expectations()
+    clean = load_clean()
+    # Interleaved and sorted by filename so the two groups are not separable
+    # from the ordering of the list.
+    entries = sorted(
+        [f"tests/fixtures/{f['file']}" for f in fixtures]
+        + [f"tests/clean/{c['file']}" for c in clean]
+    )
+    listing = "\n".join(f"  - {e}" for e in entries)
+    print(PROMPT.format(count=len(entries), files=listing))
+    return 0
+
+
+def run_grade(results_path: Path, map_path: Path | None = None) -> int:
+    fixtures = load_expectations()
+    mapping: dict[str, str] = {}
+    if map_path:
+        try:
+            mapping = json.loads(map_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            sys.exit(f"FAIL: no such map file: {map_path}")
+        except json.JSONDecodeError as exc:
+            sys.exit(f"FAIL: map file is not valid JSON: {exc}")
     try:
         findings = json.loads(results_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -226,6 +323,7 @@ def run_grade(results_path: Path) -> int:
             continue
         # Tolerate full or partial paths in the reported filename.
         name = Path(str(finding.get("file", ""))).name
+        name = mapping.get(name, name)
         by_file.setdefault(name, []).append(finding)
 
     detected = 0
@@ -258,20 +356,47 @@ def run_grade(results_path: Path) -> int:
             detected += 1
         rows.append((status, name, note))
 
+    # False positives: anything at or above the floor reported against a file
+    # that is known to be secure.
+    floor = SEVERITY_ORDER[FALSE_POSITIVE_FLOOR]
+    false_positives: list[tuple[str, str, str]] = []
+    for entry in load_clean():
+        for finding in by_file.get(entry["file"], []):
+            severity = str(finding.get("severity", "")).lower()
+            if SEVERITY_ORDER.get(severity, -1) >= floor:
+                false_positives.append((entry["file"], severity, str(finding.get("title", ""))[:52]))
+
     total = len(fixtures)
     recall = detected / total if total else 0.0
     width = max(len(name) for _, name, _ in rows)
     print(f"{'':<6}{'fixture':<{width}}  note")
     for status, name, note in rows:
         print(f"{status:<6}{name:<{width}}  {note}")
-    print(f"\nRecall: {detected}/{total} ({recall:.0%})")
+
+    clean_total = len(load_clean())
+    if false_positives:
+        print(f"\nFalse positives on known-secure files ({FALSE_POSITIVE_FLOOR}+):")
+        for name, severity, title in false_positives:
+            print(f"  FP    {name}  [{severity}] {title}")
+
+    print(f"\nRecall:    {detected}/{total} ({recall:.0%}) of planted vulnerabilities detected")
+    if clean_total:
+        clean_ok = clean_total - len({fp[0] for fp in false_positives})
+        print(f"Precision: {clean_ok}/{clean_total} known-secure files reported clean")
 
     # A security skill that misses a watchlist item it advertises is a
-    # regression, not a rounding error.
+    # regression. So is one that cries wolf on correct code — that is how a
+    # review tool gets ignored.
+    failed = False
     if detected < total:
         print("FAIL: at least one advertised watchlist item was not detected")
+        failed = True
+    if false_positives:
+        print(f"FAIL: {len(false_positives)} false positive(s) on known-secure code")
+        failed = True
+    if failed:
         return 1
-    print("OK: every advertised watchlist item was detected")
+    print("OK: every advertised watchlist item detected, no false positives")
     return 0
 
 
@@ -281,13 +406,25 @@ def main() -> None:
     group.add_argument("--check", action="store_true", help="structural corpus gate (no model needed)")
     group.add_argument("--prompt", action="store_true", help="print the audit prompt for the agent under test")
     group.add_argument("--grade", metavar="FILE", help="grade an agent's findings JSON")
+    group.add_argument(
+        "--blind",
+        metavar="DIR",
+        help="materialise a neutralised copy of the corpus in DIR and print the audit prompt",
+    )
+    parser.add_argument(
+        "--map",
+        metavar="FILE",
+        help="translation map from a --blind run, applied before grading",
+    )
     args = parser.parse_args()
 
     if args.check:
         sys.exit(run_check())
     if args.prompt:
         sys.exit(run_prompt())
-    sys.exit(run_grade(Path(args.grade)))
+    if args.blind:
+        sys.exit(run_blind(Path(args.blind)))
+    sys.exit(run_grade(Path(args.grade), Path(args.map) if args.map else None))
 
 
 if __name__ == "__main__":

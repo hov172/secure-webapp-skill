@@ -7,140 +7,272 @@
       "watchlist": 1,
       "vulnerability": "IDOR / missing ownership check",
       "min_severity": "high",
-      "must_mention": ["ownership", "owner", "idor", "access control", "authorization"]
+      "must_mention": [
+        "ownership",
+        "owner",
+        "idor",
+        "access control",
+        "authorization"
+      ]
     },
     {
       "file": "w02_hardcoded_secrets.py",
       "watchlist": 2,
       "vulnerability": "Hardcoded secrets in source",
       "min_severity": "critical",
-      "must_mention": ["hardcoded", "secret", "api key", "credential"]
+      "must_mention": [
+        "hardcoded",
+        "secret",
+        "api key",
+        "credential"
+      ]
     },
     {
       "file": "w03_sql_and_shell_injection.py",
       "watchlist": 3,
       "vulnerability": "SQL injection and OS command injection",
       "min_severity": "critical",
-      "must_mention": ["sql injection", "parameterized", "command injection", "shell"]
+      "must_mention": [
+        "sql injection",
+        "parameterized",
+        "command injection",
+        "shell"
+      ]
     },
     {
       "file": "w04_password_hashing.py",
       "watchlist": 4,
       "vulnerability": "Fast unsalted password hash (MD5)",
       "min_severity": "high",
-      "must_mention": ["md5", "argon2", "bcrypt", "password hash"]
+      "must_mention": [
+        "md5",
+        "argon2",
+        "bcrypt",
+        "password hash"
+      ]
     },
     {
       "file": "w05_jwt_verification.js",
       "watchlist": 5,
       "vulnerability": "Unpinned JWT algorithm, unverified decode, weak secret",
       "min_severity": "critical",
-      "must_mention": ["algorithm", "jwt", "decode", "verify"]
+      "must_mention": [
+        "algorithm",
+        "jwt",
+        "decode",
+        "verify"
+      ]
     },
     {
       "file": "w06_xss_dangerous_html.jsx",
       "watchlist": 6,
       "vulnerability": "Stored XSS via dangerouslySetInnerHTML / innerHTML",
       "min_severity": "high",
-      "must_mention": ["xss", "dangerouslysetinnerhtml", "innerhtml", "sanitize"]
+      "must_mention": [
+        "xss",
+        "dangerouslysetinnerhtml",
+        "innerhtml",
+        "sanitize"
+      ]
     },
     {
       "file": "w07_cors_credentialed_wildcard.js",
       "watchlist": 7,
       "vulnerability": "Credentialed CORS with echoed origin",
       "min_severity": "high",
-      "must_mention": ["cors", "origin", "credentials"]
+      "must_mention": [
+        "cors",
+        "origin",
+        "credentials"
+      ]
     },
     {
       "file": "w08_missing_auth_rate_limit.py",
       "watchlist": 8,
       "vulnerability": "No rate limiting on login and OTP verification",
       "min_severity": "medium",
-      "must_mention": ["rate limit", "brute force", "credential stuffing"]
+      "must_mention": [
+        "rate limit",
+        "brute force",
+        "credential stuffing"
+      ]
     },
     {
       "file": "w09_verbose_errors.py",
       "watchlist": 9,
       "vulnerability": "Stack traces and debug mode exposed to clients",
       "min_severity": "medium",
-      "must_mention": ["stack trace", "debug", "error", "disclosure"]
+      "must_mention": [
+        "stack trace",
+        "debug",
+        "error",
+        "disclosure"
+      ]
     },
     {
       "file": "w10_open_redirect.js",
       "watchlist": 10,
       "vulnerability": "Open redirect via unvalidated next parameter",
       "min_severity": "medium",
-      "must_mention": ["open redirect", "redirect", "allowlist"]
+      "must_mention": [
+        "open redirect",
+        "redirect",
+        "allowlist"
+      ]
     },
     {
       "file": "w11_ssrf_fetch.py",
       "watchlist": 11,
       "vulnerability": "SSRF via user-supplied URL",
       "min_severity": "high",
-      "must_mention": ["ssrf", "server-side request forgery", "private ip", "allowlist"]
+      "must_mention": [
+        "ssrf",
+        "server-side request forgery",
+        "private ip",
+        "allowlist"
+      ]
     },
     {
       "file": "w12_logging_secrets.js",
       "watchlist": 12,
       "vulnerability": "Passwords, session IDs and tokens written to logs",
       "min_severity": "high",
-      "must_mention": ["log", "password", "token", "redact"]
+      "must_mention": [
+        "log",
+        "password",
+        "token",
+        "redact"
+      ]
     },
     {
       "file": "w13_client_only_controls.jsx",
       "watchlist": 13,
       "vulnerability": "Authorization decided from a client-supplied role",
       "min_severity": "critical",
-      "must_mention": ["client", "role", "server-side", "authorization"]
+      "must_mention": [
+        "client",
+        "role",
+        "server-side",
+        "authorization"
+      ]
     },
     {
       "file": "w14_file_upload.py",
       "watchlist": 14,
       "vulnerability": "Unrestricted upload into the web root with attacker-controlled filename",
       "min_severity": "critical",
-      "must_mention": ["upload", "path traversal", "web root", "filename", "content type"]
+      "must_mention": [
+        "upload",
+        "path traversal",
+        "web root",
+        "filename",
+        "content type"
+      ]
     },
     {
       "file": "w15_fail_open.py",
       "watchlist": 15,
       "vulnerability": "Authorization and rate limiting fail open on exception",
       "min_severity": "high",
-      "must_mention": ["fail open", "fail closed", "exception", "authorization"]
+      "must_mention": [
+        "fail open",
+        "fail closed",
+        "exception",
+        "authorization"
+      ]
     },
     {
       "file": "w16_non_atomic_balance.py",
       "watchlist": 16,
       "vulnerability": "Non-atomic balance and coupon updates (race condition)",
       "min_severity": "high",
-      "must_mention": ["race", "atomic", "transaction", "concurrent"]
+      "must_mention": [
+        "race",
+        "atomic",
+        "transaction",
+        "concurrent"
+      ]
     },
     {
       "file": "w17_llm_output_into_sink.js",
       "watchlist": 17,
       "vulnerability": "Model output reaching HTML, shell and SQL sinks unchecked",
       "min_severity": "critical",
-      "must_mention": ["model output", "llm", "untrusted", "xss", "command injection", "sql"]
+      "must_mention": [
+        "model output",
+        "llm",
+        "untrusted",
+        "xss",
+        "command injection",
+        "sql"
+      ]
     },
     {
       "file": "w18_agent_tool_authorization.py",
       "watchlist": 18,
       "vulnerability": "Generic agent tools with no per-user authorization",
       "min_severity": "critical",
-      "must_mention": ["tool", "authorization", "least privilege", "shell", "prompt injection"]
+      "must_mention": [
+        "tool",
+        "authorization",
+        "least privilege",
+        "shell",
+        "prompt injection"
+      ]
     },
     {
       "file": "w19_prompt_construction.py",
       "watchlist": 19,
       "vulnerability": "Untrusted content concatenated into the system prompt; secret in context; unscoped retrieval",
       "min_severity": "high",
-      "must_mention": ["prompt injection", "system prompt", "context", "secret", "tenant"]
+      "must_mention": [
+        "prompt injection",
+        "system prompt",
+        "context",
+        "secret",
+        "tenant"
+      ]
     },
     {
       "file": "w20_ci_supply_chain.yml",
       "watchlist": 20,
       "vulnerability": "Floating action tags, unpinned install, weak audit threshold, long-lived cloud credentials",
       "min_severity": "medium",
-      "must_mention": ["pin", "floating", "audit-level", "lockfile", "oidc", "npm ci"]
+      "must_mention": [
+        "pin",
+        "floating",
+        "audit-level",
+        "lockfile",
+        "oidc",
+        "npm ci"
+      ]
     }
-  ]
+  ],
+  "clean_fixtures": [
+    {
+      "file": "clean_01_orders_scoped.js",
+      "note": "ownership enforced in the query; 404 hides existence"
+    },
+    {
+      "file": "clean_02_config_from_env.py",
+      "note": "credentials from the environment, fails loudly when absent"
+    },
+    {
+      "file": "clean_03_parameterized_queries.py",
+      "note": "parameterized SQL, allowlisted identifiers, argv-form subprocess"
+    },
+    {
+      "file": "clean_04_password_argon2.py",
+      "note": "argon2id with verify and rehash support"
+    },
+    {
+      "file": "clean_05_jwt_verified.js",
+      "note": "pinned algorithm, iss/aud/exp verified, secret from env, role looked up server-side"
+    },
+    {
+      "file": "clean_06_upload_hardened.py",
+      "note": "generated name, magic-byte check, size cap, stored outside the web root"
+    }
+  ],
+  "_clean_comment": "Secure counterparts in tests/clean/. A finding of medium severity or above against any of these is a false positive. They are presented to the agent under test alongside the vulnerable fixtures, indistinguishable by name."
 }

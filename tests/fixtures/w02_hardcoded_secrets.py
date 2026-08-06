@@ -1,10 +1,11 @@
 """Payment client configuration."""
 
-# NOTE: placeholder values only — deliberately not in any real provider's key
-# format, so secret scanners do not flag this detection fixture.
-PAYMENT_API_SECRET = "PLACEHOLDER-payment-secret-do-not-use"
-JWT_SIGNING_SECRET = "super-secret-do-not-share"
-DB_PASSWORD = "prod_admin_2024!"
+# Every value below is an obvious placeholder, chosen so secret scanners do not
+# flag this detection fixture. The vulnerability under test is that credentials
+# are hardcoded at all — not the strings themselves.
+PAYMENT_API_SECRET = "PLACEHOLDER-payment-api-secret"
+JWT_SIGNING_SECRET = "PLACEHOLDER-jwt-signing-secret"
+DB_PASSWORD = "PLACEHOLDER-database-password"
 ADMIN_BOOTSTRAP_TOKEN = "PLACEHOLDER-admin-bootstrap-token"
 
 

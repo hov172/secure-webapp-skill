@@ -3,6 +3,37 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.7
+
+Acts on what the first blind evaluation exposed. The 20/20 recall result was
+real, but it showed the corpus could no longer teach us anything: it measured
+only whether vulnerabilities were found, never whether correct code was left
+alone.
+
+### Added
+
+- **`tests/clean/`** — six secure counterparts (scoped queries, env-sourced
+  config, parameterized SQL with argv subprocess, argon2id, fully verified JWT,
+  hardened upload). A finding of medium or above against any of them is a false
+  positive and fails the eval. Low-severity hardening nits are tolerated.
+  Without this the corpus rewarded flagging everything.
+- **`eval_skill.py --blind DIR`** makes the blind protocol reproducible instead
+  of hand-rolled: it copies the whole corpus to `module_NN.<ext>` in
+  hash-shuffled order — so neither the filename nor the position hints at the
+  answer — and writes a translation map. `--grade --map` translates back.
+  Filenames like `w05_jwt_verification.js`, and the `fixtures/` vs `clean/`
+  split, both gave the answer away otherwise.
+- Grading now reports **precision** alongside recall, and the audit prompt warns
+  that some files are secure and padding counts against you.
+
+### Fixed
+
+- **`w02_hardcoded_secrets.py` contradicted itself.** Its comment claimed the
+  values were placeholders while `DB_PASSWORD = "prod_admin_2024!"` was not
+  placeholder-shaped. The blind reviewer caught the inconsistency and flagged it
+  as a real credential rather than trusting the comment — correctly. All four
+  values are now unambiguously placeholders.
+
 ## 1.4.6
 
 ### Fixed
