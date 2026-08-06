@@ -3,6 +3,21 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.10
+
+### Changed
+
+- **Documentation caught up with 1.4.7–1.4.9.** `README.md` and
+  `scripts/README.md` still described a corpus that only measured recall — they
+  never mentioned `tests/clean/`, precision scoring, or `--blind`/`--map`, all
+  added in 1.4.7. The README's Detection Corpus section is rewritten to cover
+  both directions of measurement and the blind protocol, with the concrete reason
+  blinding matters: it is what caught the skill under-rating CI supply-chain
+  findings, and the fix is in 1.4.8.
+- "One deliberately vulnerable file per watchlist item" was no longer true after
+  1.4.9 added a second fixture for item 20. Corrected in both `README.md` and
+  `tests/README.md`.
+
 ## 1.4.9
 
 ### Changed

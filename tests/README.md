@@ -4,8 +4,11 @@
 it has the right *effect*: that the skill still finds what its Always-On
 Watchlist says it finds.
 
-- `fixtures/` — one deliberately vulnerable file per watchlist item in `SKILL.md`.
-  These are **not** examples to copy. Every file here is insecure on purpose.
+- `fixtures/` — deliberately vulnerable files covering every watchlist item in
+  `SKILL.md`. Most items have one; item 20 has two, the second in a different
+  ecosystem so the corpus tests whether the principle generalises rather than
+  whether specific wording is matched. These are **not** examples to copy: every
+  file here is insecure on purpose.
 - `clean/` — secure counterparts. A finding of **medium or above** against any of
   these is a false positive. Without them the corpus only rewards flagging
   everything, which is how a review tool becomes noise people ignore. Low-severity

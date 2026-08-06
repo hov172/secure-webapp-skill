@@ -889,29 +889,59 @@ Invariants `check_skill.py` enforces on these, so they cannot quietly regress:
 ### Detection Corpus
 
 `scripts/check_skill.py` proves the package has the right *shape*. `tests/`
-proves it has the right *effect*.
+proves it has the right *effect* — and measures it in both directions.
 
-`tests/fixtures/` holds one deliberately vulnerable file per Always-On Watchlist
-item in `SKILL.md`, and `tests/expectations.json` records what a correct finding
-for each one looks like (severity floor plus expected terms).
+- `tests/fixtures/` — deliberately vulnerable files covering every Always-On
+  Watchlist item in `SKILL.md`. Most items have one; item 20 has two, the second
+  in a different ecosystem to test that the principle generalises rather than the
+  wording being matched.
+- `tests/clean/` — secure counterparts. A finding of **medium or above** against
+  one of these is a false positive and fails the eval. Without them the corpus
+  only rewards flagging everything, which is how a review tool becomes noise.
+  Low-severity hardening notes are tolerated.
+- `tests/expectations.json` — per fixture: the watchlist item, a severity floor,
+  and terms a correct finding should contain; plus the clean-fixture list.
 
 ```sh
 # Structural gate — runs in CI, no model needed.
-# Fails if a watchlist item has no fixture, or a fixture is undeclared/missing.
+# Fails if a watchlist item has no fixture, a fixture is undeclared or missing,
+# or a fixture contains a real provider key format.
 python3 scripts/eval_skill.py --check
 
-# Behavioral eval — run by hand after changing SKILL.md, references, or checklists.
+# Behavioural eval — run after changing SKILL.md, references, or the checklists.
 python3 scripts/eval_skill.py --prompt          # prints the audit prompt
 python3 scripts/eval_skill.py --grade findings.json
 ```
 
-Grading reports `PASS` / `UNDER` (found but under-severity) / `MISS` per fixture
-plus overall recall, and exits non-zero on anything short of full recall. Add a
-watchlist item without adding a fixture and the build goes red.
+Grading reports `PASS` / `UNDER` (found but under-severity) / `MISS` per fixture,
+then **recall** over the vulnerable files and **precision** over the clean ones.
+Either a miss or a medium-or-higher false positive exits non-zero.
+
+#### Running it blind
+
+Filenames like `w05_jwt_verification.js` name the answer, and the `fixtures/`
+versus `clean/` split says which group a file is in. For a real measurement,
+blind the corpus first:
+
+```sh
+python3 scripts/eval_skill.py --blind /tmp/corpus   # neutral names, one flat dir
+# ...hand the printed prompt to a FRESH agent that has not seen tests/ ...
+python3 scripts/eval_skill.py --grade findings.json --map /tmp/corpus_map.json
+```
+
+`--blind` copies every file to `module_NN.<ext>` in hash-shuffled order, so
+neither the name nor the position carries a hint, and writes the translation map
+beside the directory. Keep that map away from the agent under test.
+
+This is not ceremony. A blind run is what caught the skill under-rating CI
+supply-chain findings as `low`; fixing `references/supply-chain.md` moved the
+same finding to `high` on a re-run. See the 1.4.8 entry in
+[CHANGELOG.md](CHANGELOG.md).
 
 > [!WARNING]
 > Every file in `tests/fixtures/` is insecure on purpose. They are detection
-> targets, not examples. They are excluded from the `.skill` archive.
+> targets, not examples. Neither `tests/fixtures/` nor `tests/clean/` ships in
+> the `.skill` archive.
 
 ### Automated OWASP Refresh
 

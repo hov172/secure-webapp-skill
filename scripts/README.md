@@ -222,7 +222,21 @@ in sync:
 python scripts/eval_skill.py --check
 ```
 
-See `tests/README.md` for the behavioral eval (`--prompt` / `--grade`).
+That gate also rejects a fixture containing a real provider key format, and
+fails if `tests/clean/` is empty — without secure counterparts the corpus would
+only measure recall, and flagging everything would score perfectly.
+
+For the behavioural eval, grading reports recall over `tests/fixtures/` and
+precision over `tests/clean/`; either a miss or a medium-or-higher false positive
+fails. Blind it first, since filenames and the directory split both leak the
+answer:
+
+```sh
+python scripts/eval_skill.py --blind /tmp/corpus     # neutral names, flat dir
+python scripts/eval_skill.py --grade findings.json --map /tmp/corpus_map.json
+```
+
+See `tests/README.md` for the full protocol.
 
 Build the distributable archive:
 
