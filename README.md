@@ -645,13 +645,14 @@ The skill routes tasks to focused references:
 
 ## Token Usage
 
-Approximate runtime token impact after optimization:
+Measured, not estimated — rerun with `wc -c` over the files if you want to check:
 
-- Metadata only: about 100 tokens
-- Triggered `SKILL.md`: about 1,000 tokens
-- One relevant reference: commonly 2,000-3,000 tokens
-- Quick-check: usually 3,000-6,000 tokens depending on references loaded
-- Full audit: usually 8,000-14,000+ tokens depending on scope
+- Metadata only (the trigger description): about 146 tokens
+- Triggered `SKILL.md`: about 1903 tokens
+- One reference: 2069–3888 tokens depending on topic (median about 2855)
+- `assets/audit-checklist.md`, loaded for audits: about 1597 tokens
+- Quick-check: roughly 4758 tokens plus whatever code is read
+- Full audit: 9210 tokens and up, depending on scope and how many references apply
 
 The skill is designed so normal coding tasks load only the compact routing layer plus the most relevant reference files.
 

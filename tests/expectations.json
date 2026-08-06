@@ -246,6 +246,23 @@
         "oidc",
         "npm ci"
       ]
+    },
+    {
+      "file": "w20b_container_base_image.Dockerfile",
+      "watchlist": 20,
+      "vulnerability": "Mutable container base image, unpinned toolchain fetched over the network at build time, install-time scripts, build-arg secret, runs as root",
+      "min_severity": "medium",
+      "must_mention": [
+        "base image",
+        "digest",
+        "pin",
+        "root",
+        "build arg",
+        "npm ci",
+        "lockfile",
+        "curl"
+      ],
+      "_note": "Generalisation probe: same principle as w20 (mutable reference in a privileged build context) in a different ecosystem, deliberately worded nothing like references/supply-chain.md."
     }
   ],
   "clean_fixtures": [

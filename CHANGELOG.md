@@ -3,6 +3,33 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.9
+
+### Changed
+
+- **`SKILL.md` trimmed 32%**, from ~2,815 to ~1,903 tokens. It loads on every
+  trigger — including the routine edit where someone just wanted a function
+  written — so it had quietly stopped honouring the progressive-disclosure design
+  it advertises. Mode descriptions that restated their own asset files, and
+  watchlist item 20's severity guidance now living in
+  `references/supply-chain.md`, were the bulk of it. No functional content lost:
+  all 8 modes, 13 routing rows, and 20 watchlist items remain.
+- **README token figures are now measured rather than estimated**, and label
+  themselves as such. The old table claimed ~1,000 tokens for `SKILL.md`; the
+  real figure after trimming is ~1,903. Publishing a number that flattered the
+  design was worse than publishing a larger true one.
+
+### Added
+
+- **`tests/fixtures/w20b_container_base_image.Dockerfile`** — a generalisation
+  probe for watchlist item 20. Same principle as the CI fixture (a mutable
+  reference in a privileged build context) in a different ecosystem: mutable
+  `FROM node:20`, a toolchain piped from the network into a shell at build time,
+  `npm install` with install scripts, a secret passed via build arg, running as
+  root. Worded deliberately unlike `references/supply-chain.md`, so it tests
+  whether the principle transferred rather than whether the text was memorised —
+  the caveat recorded in 1.4.8.
+
 ## 1.4.8
 
 A blind evaluation scored 19/20 with the miss on the CI supply-chain fixture:
