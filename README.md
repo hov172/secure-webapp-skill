@@ -790,6 +790,37 @@ sent.
 the `CURATION_MODEL` repository variable). Leave it unset and the weekly refresh
 works exactly as it does now, minus the proposed edits.
 
+#### The agent variant (manual only)
+
+The scripted path above handles routine upstream edits well, but it is
+single-turn: it cannot go read a whole document, compare several references, or
+reason about a change that spans them. For the rare structural case — a new
+OWASP Top 10 edition, an ASVS major version — there is
+`.github/workflows/curate-agent.yml`, which runs Claude Code with real repository
+access.
+
+Trigger it from **Actions → Curate references (agent) → Run workflow**, and
+describe what changed upstream and what you want revised. It optionally refreshes
+first, validates the tree as a baseline, curates, and opens a PR.
+
+> [!IMPORTANT]
+> This workflow is `workflow_dispatch` only and must stay that way — it is never
+> scheduled, and `check_skill.py` fails the build if anyone adds a `schedule:`
+> trigger, removes the bounds check, or adds auto-merge.
+
+The scripted path is safe *by construction*: the model never touches the
+filesystem, so "only `references/` can change" is a property of the code. An
+agent has real write access, so that boundary is re-established afterward by
+`scripts/verify_agent_changes.py`, which fails the run — no PR opened — if
+anything outside `references/` was touched. `SKILL.md`, `scripts/`, `.github/`,
+`bin/`, `agents/`, `VERSION`, `package.json`, and the packaged archive are
+rejected even if someone widens the allowlist. You can run it by hand after any
+agent-assisted editing session:
+
+```sh
+python3 scripts/verify_agent_changes.py
+```
+
 ### Detection Corpus
 
 `scripts/check_skill.py` proves the package has the right *shape*. `tests/`

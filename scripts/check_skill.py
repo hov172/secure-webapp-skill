@@ -379,6 +379,20 @@ def check_hygiene() -> None:
         ):
             if expected not in text:
                 fail(f"release workflow missing {expected}")
+    agent_workflow = ROOT / ".github/workflows/curate-agent.yml"
+    if agent_workflow.exists():
+        text = agent_workflow.read_text(encoding="utf-8")
+        # This workflow hands a model write access to the checkout. It is only
+        # acceptable while it stays manual, bounded, and reviewed.
+        if re.search(r"^\s*schedule:", text, re.M):
+            fail("curate-agent workflow must stay manual (workflow_dispatch only), never scheduled")
+        if "workflow_dispatch:" not in text:
+            fail("curate-agent workflow must be triggered by workflow_dispatch")
+        if "scripts/verify_agent_changes.py" not in text:
+            fail("curate-agent workflow must verify the agent stayed within references/")
+        if "gh pr merge" in text or "--auto" in text:
+            fail("curate-agent workflow must not auto-merge; agent edits need human review")
+
     validate_workflow = ROOT / ".github/workflows/validate.yml"
     if validate_workflow.exists():
         text = validate_workflow.read_text(encoding="utf-8")
@@ -465,7 +479,26 @@ def check_package(skill_name: str) -> None:
             fail(f"package includes generated Python artifact: {name}")
 
 
+def is_source_checkout() -> bool:
+    """True in the repository, false in an installed copy of the skill.
+
+    The package ships these scripts, but they validate a *source tree* — they
+    need .github/, tests/, .gitignore and friends, none of which belong in a
+    runtime install. Without this check the failure is an opaque
+    "missing required path: .gitignore" for anyone who runs them from
+    ~/.claude/skills/secure-webapp.
+    """
+    return (ROOT / ".github").is_dir()
+
+
 def main() -> None:
+    if not is_source_checkout():
+        print(
+            "SKIP: this validator runs against the source repository, not an "
+            "installed copy.\n"
+            "      Clone https://github.com/hov172/secure-webapp-skill and run it there."
+        )
+        return
     values = frontmatter()
     skill_name = values["name"]
     check_required_paths(skill_name)

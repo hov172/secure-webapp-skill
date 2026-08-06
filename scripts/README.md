@@ -114,6 +114,25 @@ In CI, set the `ANTHROPIC_API_KEY` repository secret to enable it; leave it unse
 and the weekly refresh keeps working exactly as it does today, just without
 proposed edits.
 
+### `verify_agent_changes.py`
+
+Bounds what an agent-driven curation run was allowed to change. The scripted
+path never needs this — the model there cannot touch the filesystem — but
+`.github/workflows/curate-agent.yml` gives Claude Code real write access, so the
+boundary is re-established afterward:
+
+```sh
+python scripts/verify_agent_changes.py
+python scripts/verify_agent_changes.py --allow references _sources
+```
+
+It fails if anything outside `references/` changed, if nothing changed at all,
+or if the tree no longer validates. `SKILL.md`, `scripts/`, `.github/`, `bin/`,
+`agents/`, `VERSION`, `package.json`, `secure-webapp.skill` and `SHA256SUMS` are
+rejected even when the allowlist is widened — a curation run has no business
+changing how the skill is built, validated, or shipped. Useful by hand after any
+agent-assisted editing session, not just in CI.
+
 ### `reference_map.json`
 
 Declares which upstream sources ground which reference — the input that tells

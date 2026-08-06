@@ -3,6 +3,39 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.3
+
+Adds the agent variant of reference curation, deliberately kept off the schedule.
+
+### Added
+
+- **`.github/workflows/curate-agent.yml`** — runs Claude Code with real
+  repository access to curate references. `workflow_dispatch` only, for the rare
+  structural upstream change (a new Top 10 edition, an ASVS major version) where
+  the single-turn scripted path cannot read whole documents or reason across
+  several references. It refreshes, validates a baseline, curates, verifies, and
+  opens a PR.
+- **`scripts/verify_agent_changes.py`** — re-establishes after the fact the
+  boundary the scripted path holds by construction. Fails the run, so no PR is
+  opened, if anything outside `references/` changed, if nothing changed, or if
+  the tree stops validating. `SKILL.md`, `scripts/`, `.github/`, `bin/`,
+  `agents/`, `VERSION`, `package.json`, the archive and `SHA256SUMS` are refused
+  even when the allowlist is widened. Useful by hand after any agent-assisted
+  editing session.
+- `check_skill.py` fails the build if the agent workflow ever gains a `schedule:`
+  trigger, loses its `workflow_dispatch` trigger, drops the bounds check, or
+  gains auto-merge.
+
+### Fixed
+
+- **Validators no longer fail confusingly in an installed copy.** `check_skill.py`
+  ships in the archive but validates a *source tree*, so running it from
+  `~/.claude/skills/secure-webapp` — which `$secure-webapp maintain` invites —
+  died on `missing required path: .gitignore`, a file the package deliberately
+  excludes. It predates this release; the `tests/` requirements added in 1.4.0
+  widened it. Both `check_skill.py` and `eval_skill.py --check` now detect an
+  installed copy and skip with an explanation instead of a spurious failure.
+
 ## 1.4.2
 
 Sharpens reference curation, after asking whether it should instead run as an

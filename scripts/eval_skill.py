@@ -119,6 +119,14 @@ def parses_cleanly(path: Path) -> str | None:
 
 
 def run_check() -> int:
+    # The detection corpus lives in the repository, not in a runtime install.
+    if not FIXTURES.is_dir():
+        print(
+            "SKIP: the detection corpus ships with the source repository, not an "
+            "installed copy.\n"
+            "      Clone https://github.com/hov172/secure-webapp-skill and run it there."
+        )
+        return 0
     fixtures = load_expectations()
     watchlist = watchlist_items()
 

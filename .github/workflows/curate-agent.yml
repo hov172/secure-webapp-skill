@@ -1,0 +1,136 @@
+name: Curate references (agent)
+
+# Manual only, deliberately. The weekly refresh uses scripts/curate_references.py,
+# where the model never touches the filesystem and "only references/ can change"
+# is a property of the code. This workflow trades that structural guarantee for
+# an agent that can read whole documents and reason across several references —
+# worth it for a new OWASP Top 10 edition or an ASVS major version, not worth it
+# for a routine cheat-sheet tweak. Never put this on a schedule.
+
+on:
+  workflow_dispatch:
+    inputs:
+      instructions:
+        description: "What changed upstream and what you want revised (the agent reads _sources/CHANGES.md too)"
+        required: true
+        type: string
+      refresh_first:
+        description: "Run scripts/refresh.py before curating"
+        required: false
+        type: boolean
+        default: true
+      model:
+        description: "Model override (blank uses the action default)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  curate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Refresh upstream OWASP material
+        if: inputs.refresh_first
+        run: python3 scripts/refresh.py
+
+      # The tree must be sound before an agent edits it, for the same reason
+      # curate_references.py checks a baseline: otherwise a pre-existing problem
+      # gets blamed on the run.
+      - name: Baseline validation
+        run: |
+          python3 scripts/check_skill.py
+          python3 scripts/eval_skill.py --check
+
+      - name: Curate with Claude Code
+        uses: anthropics/claude-code-action@c038e4dcdedfbbca18dfb17df35a17e40ded4ddc # v1.0.186
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
+          prompt: |
+            You are maintaining the curated reference files of the `secure-webapp`
+            skill, an OWASP-grounded security skill loaded by coding agents.
+
+            The maintainer's instructions for this run:
+
+            ${{ inputs.instructions }}
+
+            Context you should read first:
+            - `_sources/CHANGES.md` — what moved upstream in the latest refresh
+            - `scripts/reference_map.json` — which upstream sources ground which reference
+            - `_sources/**` — the upstream OWASP material itself
+            - `references/*.md` — the curated guidance you are revising
+
+            Rules, which are enforced after you finish by
+            `scripts/verify_agent_changes.py` — a run that breaks them is rejected
+            and no pull request is opened:
+
+            - Edit files under `references/` ONLY. Do not touch `SKILL.md`,
+              `scripts/`, `.github/`, `agents/`, `bin/`, `tests/`, `VERSION`,
+              `package.json`, or the packaged archive. If you believe one of those
+              needs to change, say so in your final message instead of doing it.
+            - Change guidance only where the upstream material actually shifted:
+              a changed recommendation, a newly deprecated or preferred
+              algorithm/parameter/API, a new attack class, a materially new
+              defense. Not typo fixes, link changes, reordering, or material a
+              reference already covers in its own words.
+            - Preserve each file's voice, structure, heading levels, and
+              code-first style. Make targeted edits, not rewrites.
+            - Do not cite OWASP requirement identifiers; this skill omits them
+              deliberately.
+            - Do not add changelogs, "recently updated" notes, attribution, or
+              any machine-generated summary section.
+            - Keep each file's closing checklist in sync with your edits.
+            - Keep cross-references (`authorization.md` and friends) resolving to
+              files that exist.
+            - Doing nothing is a valid outcome. Say so rather than inventing work.
+
+            Finish with a short report: which references you changed, what upstream
+            change justified each edit, and anything you deliberately left alone.
+
+      # Re-establishes the boundary the scripted path has by construction.
+      - name: Verify the agent stayed in bounds
+        run: python3 scripts/verify_agent_changes.py
+
+      - name: Rebuild package and checksums
+        run: |
+          python3 scripts/package_skill.py
+          python3 scripts/release_checksums.py
+
+      - name: Open a pull request for review
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: agent-curated reference updates"
+          title: "chore: agent-curated reference updates"
+          body: |
+            Agent-driven reference curation, triggered manually.
+
+            **Maintainer instructions**
+
+            ${{ inputs.instructions }}
+
+            The agent was restricted to `references/`, and
+            `scripts/verify_agent_changes.py` confirmed it stayed there before this
+            PR was opened. The package validator and detection-corpus gate both
+            passed.
+
+            **Review required — this PR does not auto-merge.** These are
+            model-proposed edits to security guidance, not an authority. Read them
+            against `_sources/CHANGES.md`, and re-run
+            `python3 scripts/eval_skill.py --grade` if the guidance moved
+            materially.
+          branch: curate/agent
+          delete-branch: true
+          add-paths: |
+            _sources/**
+            references/**
+            secure-webapp.skill
+            SHA256SUMS

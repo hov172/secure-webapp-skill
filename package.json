@@ -1,6 +1,6 @@
 {
   "name": "secure-webapp-skill",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "OWASP-grounded security guidance skill for Claude, Codex, Gemini, and other AI agents.",
   "bin": {
     "secure-webapp-skill": "./bin/install.js",
