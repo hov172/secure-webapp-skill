@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   refresh:
@@ -17,9 +18,20 @@ jobs:
         with:
           persist-credentials: false
       - name: Refresh upstream OWASP material
-        run: python3 scripts/refresh.py --quiet
-      - name: Sync curated references
-        run: python3 scripts/sync_references.py
+        run: python3 scripts/refresh.py
+      - name: Detect unresolved fetch errors
+        id: fetch_errors
+        run: |
+          if grep -q "Fetch errors" _sources/CHANGES.md; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "detail<<SWEOF"
+              sed -n '/Fetch errors/,/^## Changes by source/p' _sources/CHANGES.md | head -40
+              echo "SWEOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Build package and checksums
         run: |
           python3 scripts/package_skill.py
@@ -28,32 +40,47 @@ jobs:
         run: |
           rm -rf scripts/__pycache__
           python3 scripts/check_skill.py
+      # references/ is curated by hand. This job only refreshes the upstream
+      # cache and reports what moved; a human decides which guidance changes.
       - name: Create refresh pull request
         id: cpr
         uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: refresh OWASP sources"
+          commit-message: "chore: refresh OWASP upstream source cache"
           title: "chore: refresh OWASP upstream sources"
           body: |
             Weekly automated refresh from upstream OWASP GitHub repositories.
 
             This PR includes:
             - refreshed `_sources/**`
-            - deterministic reference updates under `references/**`
             - rebuilt `secure-webapp.skill`
             - refreshed `SHA256SUMS`
 
-            The curated references are synced automatically from the refreshed OWASP cache.
+            **Review required — this PR does not auto-merge.** `references/**` is
+            curated by hand and is deliberately untouched by this job. Read
+            `_sources/CHANGES.md` and decide whether any upstream change warrants
+            a reference edit before merging.
           branch: refresh/owasp-sources
           delete-branch: true
           add-paths: |
             _sources/**
-            references/**
             secure-webapp.skill
             SHA256SUMS
-      - name: Auto-merge refresh pull request
-        if: steps.cpr.outputs.pull-request-number != ''
+      - name: Report unfetchable upstream files
+        if: steps.fetch_errors.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr merge "${{ steps.cpr.outputs.pull-request-number }}" --squash --delete-branch
+          TITLE: "refresh: upstream OWASP file(s) could not be fetched"
+          DETAIL: ${{ steps.fetch_errors.outputs.detail }}
+        run: |
+          existing=$(gh issue list --state open --search "$TITLE in:title" --json number --jq '.[0].number // empty')
+          body=$(printf '%s\n\n%s\n\n%s\n' \
+            "The weekly refresh could not fetch one or more files listed in \`scripts/manifest.json\`. Cached copies were kept, so the refresh itself still succeeded." \
+            "$DETAIL" \
+            "Usual cause: the file was renamed or removed upstream. Fix \`scripts/manifest.json\`.")
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$TITLE" --body "$body"
+          fi

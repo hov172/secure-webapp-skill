@@ -4,14 +4,22 @@ This directory contains the tooling for keeping the skill current with upstream 
 
 ## The workflow
 
-The maintenance flow is deterministic:
-
 1. `manifest.json` defines which upstream OWASP files are tracked.
 2. `refresh.py` pulls those files into `_sources/` and writes `CHANGES.md`.
-3. `sync_references.py` turns that cache into curated reference updates with fixed rules.
-4. `package_skill.py` and `release_checksums.py` rebuild the distributable outputs.
+3. **A maintainer reads `CHANGES.md`** and hand-edits whichever `references/*.md` the upstream changes actually affect.
+4. `eval_skill.py --check` confirms the detection corpus still covers every watchlist item.
+5. `package_skill.py` and `release_checksums.py` rebuild the distributable outputs.
 
-The references stay opinionated, but they are no longer hand-edited after each upstream refresh.
+Step 3 is deliberately human. A `sync_references.py` script used to sit here and
+regenerate a bullet list from substring matches against the cache; across eight
+refreshes it produced exactly one reference change (a deleted blank line) while
+the README claimed references were "synced automatically." It was removed in
+v1.4.0 rather than left to imply a freshness the pipeline never delivered.
+
+A renamed or removed upstream file no longer fails the refresh: the cached copy
+is kept, `CHANGES.md` records the failure, and CI opens a maintenance issue.
+`refresh.py` exits non-zero only when a whole source comes back empty, or under
+`--strict`.
 
 ## Recommended cadence
 
@@ -25,7 +33,8 @@ From the skill folder root:
 
 ```sh
 python scripts/refresh.py
-python scripts/sync_references.py
+# read _sources/CHANGES.md, edit references/ as warranted
+python scripts/eval_skill.py --check
 python scripts/package_skill.py
 python scripts/release_checksums.py
 ```
@@ -36,12 +45,15 @@ This will:
 3. Compare against the previous run and write `_sources/CHANGES.md`.
 4. Update `_sources/_state.json` with the new content hashes.
 
-Then the curated references are regenerated from the refreshed cache, the package is rebuilt, and the release checksum is refreshed.
+5. Prune cached files the manifest no longer tracks, so a rename upstream cannot leave a stale copy behind.
+
+Then a maintainer updates the curated references, the package is rebuilt, and the release checksum is refreshed.
 
 Other modes:
 - `--dry-run` — list what would be fetched without fetching.
-- `--quiet` — minimal output (good for CI).
+- `--quiet` — minimal output (good for CI). Fetch errors are still printed.
 - `--offline` — skip network; regenerate `CHANGES.md` from cached `_sources/` only.
+- `--strict` — treat any fetch error as fatal (default is to keep the cached copy and carry on).
 
 ## Customizing what's tracked
 
@@ -58,6 +70,17 @@ Run the local validator before publishing:
 ```sh
 python scripts/check_skill.py
 ```
+
+It checks package shape, installer/`SKILL.md` mode parity, installer checksum
+verification, and that the upstream cache is not stale (older than
+`SKILL_MAX_SOURCE_AGE_DAYS`, default 30). Then confirm the detection corpus is
+in sync:
+
+```sh
+python scripts/eval_skill.py --check
+```
+
+See `tests/README.md` for the behavioral eval (`--prompt` / `--grade`).
 
 Build the distributable archive:
 
@@ -77,7 +100,7 @@ End-user installers. All are version-checked: they skip installation when the in
 
 ### `bin/install.js`
 
-Node / `npx` installer (macOS, Windows, Linux). Auto-detects which clients (`.claude`, `.codex`, `.gemini`) are already installed and updates each, copying all skill files including `AGENTS.md`, `GEMINI.md`, and `VERSION`. Flags: `--global`, `--claude` / `--codex` / `--gemini`, `--check`, `--force`, `--no-wire`.
+Node / `npx` installer (macOS, Windows, Linux). Auto-detects which clients (`.claude`, `.codex`, `.gemini`) are already installed and updates each. It installs the same file set as the released `.skill` archive — including `scripts/`, which `$secure-webapp maintain` and `setup-auto-update.js` need; `check_skill.py` fails the build if the two lists diverge. Flags: `--global`, `--claude` / `--codex` / `--gemini`, `--check`, `--force`, `--no-wire`.
 
 ```sh
 npx --yes github:hov172/secure-webapp-skill --global
@@ -85,7 +108,7 @@ npx --yes github:hov172/secure-webapp-skill --global
 
 ### `install.sh`
 
-Bash installer for macOS and Linux (downloads the latest released `secure-webapp.skill`). Flags: `--local`, `--codex`, `--gemini`, `--local-codex`, `--local-gemini`, `--force`, `--no-wire`.
+Bash installer for macOS and Linux (downloads the latest released `secure-webapp.skill` and verifies it against the release's `SHA256SUMS` before unpacking — fails closed on mismatch, missing sums, or no available hashing tool). Flags: `--local`, `--codex`, `--gemini`, `--local-codex`, `--local-gemini`, `--force`, `--no-wire`, `--no-verify`.
 
 ```sh
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --codex
@@ -93,13 +116,13 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-ski
 
 ### `install.ps1`
 
-PowerShell installer for Windows (no Node.js required).
+PowerShell installer for Windows (no Node.js required). Verifies the download against the release's `SHA256SUMS` before unpacking.
 
 ```powershell
 pwsh -File scripts/install.ps1 -Client gemini -Force
 ```
 
-Parameters: `-Client claude|codex|gemini`, `-Local`, `-Force`, `-NoWire`.
+Parameters: `-Client claude|codex|gemini`, `-Local`, `-Force`, `-NoWire`, `-NoVerify`.
 
 ## Auto-update
 
@@ -135,7 +158,6 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.x' }
       - run: python scripts/refresh.py
-      - run: python scripts/sync_references.py
       - run: python scripts/package_skill.py
       - run: python scripts/release_checksums.py
       - uses: peter-evans/create-pull-request@v6
@@ -145,10 +167,16 @@ jobs:
           branch: refresh-owasp-sources
           add-paths: |
             _sources/**
-            references/**
             secure-webapp.skill
             SHA256SUMS
 ```
+
+Note what is **not** here: `references/**` is not in `add-paths`, and there is no
+auto-merge step. Upstream OWASP text is third-party content; letting it reach a
+published artifact without review is a supply-chain path. The live workflow in
+`.github/workflows/refresh-owasp.yml` also opens a maintenance issue when a
+manifest file 404s, so a rename upstream surfaces instead of silently freezing
+the cache. `check_skill.py` enforces both properties.
 
 ## What lives in `_sources/`
 

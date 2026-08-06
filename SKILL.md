@@ -1,6 +1,6 @@
 ---
 name: secure-webapp
-description: Use for OWASP-grounded security guidance when building, editing, or reviewing web applications. Trigger proactively for auth, sessions, JWT/OAuth/OIDC, user input, DB queries, file uploads, API endpoints, cookies/CORS/CSP/security headers, secrets, redirects, external URL fetches, logging/errors, dependencies, threat modeling, hardening, audits, or vulnerability classes such as XSS, SQLi, IDOR, CSRF, SSRF, open redirect, prototype pollution, deserialization, and supply chain risk.
+description: Use for OWASP-grounded security guidance when building, editing, or reviewing web applications. Trigger proactively for auth, sessions, JWT/OAuth/OIDC, user input, DB queries, file uploads, API endpoints, cookies/CORS/CSP/security headers, secrets, redirects, external URL fetches, logging/errors, dependencies, threat modeling, hardening, audits, LLM/AI features such as prompt handling, agent tools, and MCP servers, or vulnerability classes such as XSS, SQLi, IDOR, CSRF, SSRF, open redirect, prototype pollution, deserialization, prompt injection, and supply chain risk.
 ---
 
 # Secure Web App Coding
@@ -42,6 +42,7 @@ Load only the relevant reference files. Do not bulk-load all references.
 | User-controlled external URLs, SSRF, race conditions, deserialization, prototype pollution | `references/secure-coding.md` |
 | Logging, error responses, stack traces, audit trails, fail-closed, rollback | `references/logging-and-errors.md` |
 | New feature design, threat modeling, multi-tenancy, secure-by-design decisions | `references/insecure-design.md` |
+| LLM/AI features, prompt construction, RAG, agent tool calls, MCP servers, model output rendered or executed | `references/ai-and-llm.md` |
 
 For multi-category work, load the few references that directly apply.
 
@@ -65,7 +66,10 @@ Flag these in passing when seen in web code, with one concrete fix:
 14. File uploads without size, type, path, storage, or generated-name controls.
 15. Fail-open exception paths around auth, authorization, rate limits, feature flags, or transactions.
 16. Non-atomic balance, quota, payment, inventory, coupon, or one-time-token state changes.
-17. Floating CI actions/dependencies where pinning/lockfiles are expected. In monorepos and full-stack projects, dependency audits must run in every workspace (`frontend/`, `backend/`, etc.) — a clean audit in one package does not cover others. Flag if the CI audit threshold (`--audit-level`) is weaker than `high`.
+17. Model/LLM output flowing unchecked into an interpreter or sink: `innerHTML`, shell, SQL, file paths, `fetch` URLs, or a downstream agent. Treat it as untrusted input.
+18. Agent tool calls authorized against the service account instead of the end user, or generic `run_shell`/`execute_sql`/`http_request` tools that turn any prompt injection into RCE, SQLi, or SSRF.
+19. User- or document-supplied text concatenated into a system prompt, and secrets or other users' data placed in the model context window.
+20. Floating CI actions/dependencies where pinning/lockfiles are expected. In monorepos and full-stack projects, dependency audits must run in every workspace (`frontend/`, `backend/`, etc.) — a clean audit in one package does not cover others. Flag if the CI audit threshold (`--audit-level`) is weaker than `high`.
 
 ## Behavior
 

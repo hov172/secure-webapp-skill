@@ -35,6 +35,7 @@ It is designed for AI workflows where security needs to be present by default, w
 - [Reference Files](#reference-files)
 - [Token Usage](#token-usage)
 - [Maintainer Guide](#maintainer-guide)
+  - [Detection Corpus](#detection-corpus)
 - [OWASP Sources](#owasp-sources)
 - [License and Attribution](#license-and-attribution)
 - [Connect With Me](#-connect-with-me)
@@ -84,9 +85,15 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-ski
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/hov172/secure-webapp-skill/main/scripts/install.sh)" -- --gemini
 ```
 
+> [!NOTE]
+> The bash installer downloads `SHA256SUMS` from the same release and verifies
+> the archive before unpacking. It fails closed: a mismatch, a missing sums
+> file, or no available hashing tool aborts the install. `--no-verify`
+> overrides this and is not recommended.
+
 ### Quick Install on Windows (PowerShell)
 
-On Windows the `npx` commands above work as-is (Node.js required). If you prefer not to use Node.js, use the PowerShell installer, which downloads the latest release and version-checks before unpacking:
+On Windows the `npx` commands above work as-is (Node.js required). If you prefer not to use Node.js, use the PowerShell installer, which downloads the latest release, verifies it against the published `SHA256SUMS` (use `-NoVerify` to skip), and version-checks before unpacking:
 
 ```powershell
 # Install for Claude (default)
@@ -421,7 +428,7 @@ The skill uses progressive disclosure:
 2. **`SKILL.md`** provides compact routing, behavior rules, and high-priority watchlist items.
 3. **Reference files** are loaded only when relevant to the task.
 4. **Audit checklist** is loaded only for review/audit/hardening workflows.
-5. **Maintenance scripts** refresh upstream OWASP source material, deterministically sync the curated references, validate the package, and build the `.skill` archive.
+5. **Maintenance scripts** refresh upstream OWASP source material, validate the package, grade the detection corpus, and build the `.skill` archive.
 
 This keeps token usage low during normal coding tasks while preserving deeper guidance for security-sensitive work.
 
@@ -588,7 +595,7 @@ Expected behavior:
 - Runs `npx --yes github:hov172/secure-webapp-skill --global` in the terminal
 - Is **platform-aware**: auto-detects every installed client (`.claude`, `.codex`, `.gemini`) and updates each, instead of assuming Claude
 - Is **version-checked**: compares the installed `VERSION` against the published version and skips clients that are already current (`already up to date`)
-- Replaces the installed `SKILL.md`, `AGENTS.md`, `GEMINI.md`, `references/`, `assets/`, and `VERSION` with the latest published versions
+- Replaces the installed `SKILL.md`, `AGENTS.md`, `GEMINI.md`, `references/`, `assets/`, `agents/`, `scripts/`, and `VERSION` with the latest published versions
 - Accepts `--codex` / `--gemini` / `--claude` (target one client), `--check` (report only), and `--force` (reinstall regardless of version)
 - For Codex/Gemini, refreshes the `AGENTS.md` / `GEMINI.md` discovery pointer so the skill stays active (skip with `--no-wire`)
 - No manual steps required — the agent handles the update in-session
@@ -608,9 +615,9 @@ Use $secure-webapp maintain to refresh OWASP sources and rebuild the package.
 Expected behavior:
 
 - Run or update `scripts/refresh.py`
-- Run `scripts/sync_references.py`
+- Review `_sources/CHANGES.md` and hand-edit any `references/*.md` the upstream changes affect
 - Rebuild the package and checksums
-- Run `scripts/check_skill.py`
+- Run `scripts/check_skill.py` and `scripts/eval_skill.py --check`
 
 ## Reference Files
 
@@ -630,6 +637,7 @@ The skill routes tasks to focused references:
 | SSRF, defensive coding, race conditions, deserialization | `references/secure-coding.md` |
 | Logging, errors, fail-closed behavior, exceptional conditions | `references/logging-and-errors.md` |
 | Threat modeling, design review, multi-tenancy, abuse cases | `references/insecure-design.md` |
+| LLM/AI features, prompt injection, RAG, agent tools, MCP servers | `references/ai-and-llm.md` |
 
 ## Token Usage
 
@@ -655,21 +663,22 @@ There are two ways this skill gets updated:
 The update order is the same in both cases:
 
 1. Fetch the latest OWASP source files into `_sources/`.
-2. Regenerate the curated `references/*.md` files with deterministic rules.
+2. Read `_sources/CHANGES.md` and decide, by hand, which curated `references/*.md` need to move.
 3. Rebuild `secure-webapp.skill`.
 4. Regenerate `SHA256SUMS`.
 5. Validate the result.
+
+> [!NOTE]
+> Step 2 is deliberately manual. References are curated and opinionated;
+> mechanical regeneration produced no meaningful updates and gave a false
+> impression of freshness, so it was removed in v1.4.0. `_sources/CHANGES.md`
+> is the triage input — it reports exactly which upstream files moved and
+> whether they gained new sections.
 
 Refresh upstream OWASP source material locally:
 
 ```sh
 python3 scripts/refresh.py
-```
-
-Sync curated references from the refreshed cache:
-
-```sh
-python3 scripts/sync_references.py
 ```
 
 Dry-run refresh without downloading:
@@ -682,6 +691,12 @@ Validate the skill package:
 
 ```sh
 python3 scripts/check_skill.py
+```
+
+Check the detection corpus still covers every watchlist item:
+
+```sh
+python3 scripts/eval_skill.py --check
 ```
 
 Build the `.skill` archive:
@@ -702,9 +717,38 @@ Generate checksums and a detached GPG signature when a signing key is available:
 python3 scripts/release_checksums.py --sign
 ```
 
-The update flow does not require an API key. It reads OWASP repositories directly, then deterministically updates the curated references from the refreshed cache.
+The update flow does not require an API key. It reads OWASP repositories directly into the local cache; the curated references are then updated by a human reading `_sources/CHANGES.md`.
+
+A single upstream file that has been renamed or removed no longer fails the whole refresh — the cached copy is kept, the failure is reported in `_sources/CHANGES.md`, and CI opens a maintenance issue naming the file. Use `--strict` to make any fetch error fatal.
 
 The package script intentionally excludes GitHub-facing docs, `_sources/`, cache files, and local scratch directories from the runtime `.skill` archive.
+
+### Detection Corpus
+
+`scripts/check_skill.py` proves the package has the right *shape*. `tests/`
+proves it has the right *effect*.
+
+`tests/fixtures/` holds one deliberately vulnerable file per Always-On Watchlist
+item in `SKILL.md`, and `tests/expectations.json` records what a correct finding
+for each one looks like (severity floor plus expected terms).
+
+```sh
+# Structural gate — runs in CI, no model needed.
+# Fails if a watchlist item has no fixture, or a fixture is undeclared/missing.
+python3 scripts/eval_skill.py --check
+
+# Behavioral eval — run by hand after changing SKILL.md, references, or checklists.
+python3 scripts/eval_skill.py --prompt          # prints the audit prompt
+python3 scripts/eval_skill.py --grade findings.json
+```
+
+Grading reports `PASS` / `UNDER` (found but under-severity) / `MISS` per fixture
+plus overall recall, and exits non-zero on anything short of full recall. Add a
+watchlist item without adding a fixture and the build goes red.
+
+> [!WARNING]
+> Every file in `tests/fixtures/` is insecure on purpose. They are detection
+> targets, not examples. They are excluded from the `.skill` archive.
 
 ### Automated OWASP Refresh
 
@@ -715,17 +759,23 @@ This repository includes `.github/workflows/refresh-owasp.yml`.
 
 The workflow runs weekly on Monday at 09:00 UTC and can also be started manually from GitHub Actions. It:
 
-1. Runs `python3 scripts/refresh.py --quiet`.
+1. Runs `python3 scripts/refresh.py`.
 2. Writes upstream OWASP changes under `_sources/`.
-3. Runs `python3 scripts/sync_references.py`.
-4. Rebuilds `secure-webapp.skill` and `SHA256SUMS`.
-5. Opens a pull request on `refresh/owasp-sources` when changes are detected.
-6. Automatically squash-merges the pull request.
+3. Rebuilds `secure-webapp.skill` and `SHA256SUMS`.
+4. Opens a pull request on `refresh/owasp-sources` when changes are detected.
+5. Opens (or comments on) a maintenance issue if any manifest file could not be fetched.
 
-This is the no-key automation path: OWASP source files are refreshed automatically, the curated `references/*.md` files are deterministically synced from the refreshed cache, and the distributable package is rebuilt from the updated tree.
+This is the no-key automation path: OWASP source files are refreshed automatically and the distributable package is rebuilt from the updated tree.
 
 > [!IMPORTANT]
-> The skill content changes only through this refresh pipeline. Runtime installs do not self-update inside your agent; they update when you reinstall via `npx` / `bash` / PowerShell, run `$secure-webapp update`, or enable [Automatic Updates](#automatic-updates-optional). Each path is version-checked, so it only reinstalls when a newer version is published.
+> **The refresh PR does not auto-merge.** It touches `_sources/` only —
+> `references/**` is curated by hand and is never written by CI. Upstream OWASP
+> content reaching a shipped artifact without human review is a supply-chain
+> path this repository deliberately closes. Review the PR, apply any reference
+> edits the changes warrant, then merge.
+
+> [!IMPORTANT]
+> Runtime installs do not self-update inside your agent; they update when you reinstall via `npx` / `bash` / PowerShell, run `$secure-webapp update`, or enable [Automatic Updates](#automatic-updates-optional). Each path is version-checked, so it only reinstalls when a newer version is published.
 
 The repository can keep `_sources/` in Git history for maintenance. The runtime `.skill` package still excludes `_sources/` so token usage stays low.
 
@@ -750,9 +800,9 @@ The version is read by the cross-platform installers and updater:
 
 | Script | Platform | Purpose |
 |---|---|---|
-| `bin/install.js` | macOS / Windows / Linux | Node/`npx` installer; auto-detects clients, version-checks, copies all skill files |
-| `scripts/install.sh` | macOS / Linux | Bash installer for environments without Node.js |
-| `scripts/install.ps1` | Windows | PowerShell installer for environments without Node.js |
+| `bin/install.js` | macOS / Windows / Linux | Node/`npx` installer; auto-detects clients, version-checks, installs the same file set as the `.skill` archive |
+| `scripts/install.sh` | macOS / Linux | Bash installer for environments without Node.js; verifies the download against `SHA256SUMS` (`--no-verify` to override) |
+| `scripts/install.ps1` | Windows | PowerShell installer for environments without Node.js; verifies the download against `SHA256SUMS` (`-NoVerify` to override) |
 | `scripts/setup-auto-update.js` | macOS / Windows / Linux | Registers an opt-in background updater (launchd / Task Scheduler / cron) |
 
 ### Packaging
@@ -778,19 +828,23 @@ It contains:
 - `agents/claude.yaml`
 - `agents/openai.yaml`
 - `agents/gemini.yaml`
-- `scripts/` (including `setup-auto-update.js`)
-- `LICENSE.txt`
+- `scripts/` (including `setup-auto-update.js` and the maintenance scripts)
+- `LICENSE` (MIT, for the skill itself)
+- `LICENSE.txt` (upstream OWASP attribution)
 
 It does not contain:
 
 - `package.json`
 - `README.md`
 - `_sources/`
+- `tests/`
 - `.gitignore`
 - `scripts/README.md`
 - `scripts/install.sh`
 - `scripts/install.ps1`
 - `bin/install.js`
+
+`bin/install.js` installs this same set. `scripts/check_skill.py` fails the build if the two diverge.
 - `SHA256SUMS` / `SHA256SUMS.asc`
 - Python cache files
 - Local build scratch directories

@@ -7,6 +7,7 @@ CLIENT="claude"
 LOCAL=0
 FORCE=0
 NO_WIRE=0
+NO_VERIFY=0
 for arg in "$@"; do
     case "$arg" in
         --local) INSTALL_DIR="$PWD/.claude/skills"; CLIENT="claude"; LOCAL=1 ;;
@@ -16,16 +17,65 @@ for arg in "$@"; do
         --local-gemini) INSTALL_DIR="$PWD/.gemini/skills"; CLIENT="gemini"; LOCAL=1 ;;
         --force) FORCE=1 ;;
         --no-wire) NO_WIRE=1 ;;
+        --no-verify) NO_VERIFY=1 ;;
     esac
 done
+
+# Verify the downloaded archive against the SHA256SUMS published with the same
+# release. Fails closed: a mismatch, a missing sums file, or no available hash
+# tool aborts the install. --no-verify is the documented escape hatch.
+verify_checksum() {
+    local archive="$1" sums="$2"
+    if [ "$NO_VERIFY" -eq 1 ]; then
+        echo "⚠️  Skipping checksum verification (--no-verify)."
+        return 0
+    fi
+    if [ ! -s "$sums" ]; then
+        echo "❌ Could not download SHA256SUMS for this release; refusing to install."
+        echo "   Re-run with --no-verify to override."
+        return 1
+    fi
+
+    local expected actual
+    expected=$(awk '$2 ~ /secure-webapp\.skill$/ {print $1; exit}' "$sums")
+    if [ -z "$expected" ]; then
+        echo "❌ SHA256SUMS has no entry for secure-webapp.skill; refusing to install."
+        return 1
+    fi
+
+    if command -v sha256sum >/dev/null 2>&1; then
+        actual=$(sha256sum "$archive" | awk '{print $1}')
+    elif command -v shasum >/dev/null 2>&1; then
+        actual=$(shasum -a 256 "$archive" | awk '{print $1}')
+    else
+        echo "❌ No sha256sum or shasum available to verify the download."
+        echo "   Install one, or re-run with --no-verify to override."
+        return 1
+    fi
+
+    if [ "$actual" != "$expected" ]; then
+        echo "❌ Checksum mismatch — refusing to install."
+        echo "   expected: $expected"
+        echo "   actual:   $actual"
+        return 1
+    fi
+    echo "Checksum verified (sha256 ${actual:0:16}...)."
+}
 
 echo "Installing secure-webapp skill..."
 mkdir -p "$INSTALL_DIR"
 
 # Download the latest release asset.
 TEMP_DIR=$(mktemp -d)
+RELEASE_BASE="https://github.com/hov172/secure-webapp-skill/releases/latest/download"
 echo "Downloading latest release..."
-curl -sL "https://github.com/hov172/secure-webapp-skill/releases/latest/download/secure-webapp.skill" -o "$TEMP_DIR/secure-webapp.skill"
+curl -fsSL "$RELEASE_BASE/secure-webapp.skill" -o "$TEMP_DIR/secure-webapp.skill"
+curl -fsSL "$RELEASE_BASE/SHA256SUMS" -o "$TEMP_DIR/SHA256SUMS" || true
+
+if ! verify_checksum "$TEMP_DIR/secure-webapp.skill" "$TEMP_DIR/SHA256SUMS"; then
+    rm -rf "$TEMP_DIR"
+    exit 1
+fi
 
 # Compare the packaged version with what is already installed and skip when current.
 NEW_VER=$(unzip -p "$TEMP_DIR/secure-webapp.skill" secure-webapp/VERSION 2>/dev/null | tr -d '[:space:]' || true)

@@ -37,10 +37,22 @@ def should_include(path: Path, package_name: str) -> bool:
         return False
     if rel.as_posix() in {"scripts/README.md", "scripts/install.sh", "scripts/install.ps1", "bin/install.js"}:
         return False
+    if rel.parts[0] == "tests":
+        return False
     allowed_roots = {"agents", "assets", "references", "scripts"}
     if rel.parts[0] in allowed_roots:
         return True
-    return rel.as_posix() in {"SKILL.md", "LICENSE.txt", "AGENTS.md", "GEMINI.md", "VERSION"}
+    # LICENSE is the skill's own MIT license; LICENSE.txt is upstream OWASP
+    # attribution. Both ship. Keep this list in sync with itemsToCopy in
+    # bin/install.js so npx installs and .skill archives match.
+    return rel.as_posix() in {
+        "SKILL.md",
+        "LICENSE",
+        "LICENSE.txt",
+        "AGENTS.md",
+        "GEMINI.md",
+        "VERSION",
+    }
 
 
 def main() -> None:

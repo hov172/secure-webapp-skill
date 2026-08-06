@@ -1,11 +1,12 @@
 {
-  "last_run": "2026-06-29T10:38:07.745170+00:00",
+  "fetch_errors": [],
+  "last_run": "2026-08-06T04:05:53.863562+00:00",
   "sources": {
     "asvs_5_0": {
       "base_url": "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/",
       "files": {
         "0x12-V3-Web-Frontend-Security.md": {
-          "sha256": "02de197d5aa55592cfa524e66d4aa15bd3e8955e23e76438ac413c94172488fc"
+          "sha256": "0284ec2ed96614aa4e3ced4e3820e5867aa095b3dd89842c3dd8ec42bc232758"
         },
         "0x14-V5-File-Handling.md": {
           "sha256": "079a51123e5156a5ffc6329f266d49752cb60f6b780899484c3f1cfde3734ebb"
@@ -54,37 +55,37 @@
           "sha256": "4c3f631b959cb88c4aa5b040ec7a6da259fa5a0d01c03c9ce12f5df6face0de7"
         },
         "Attack_Surface_Analysis_Cheat_Sheet.md": {
-          "sha256": "d422bdecaf6e19ce93151fe99b073d56a300f974931091a4340b074f3cdf0bf1"
+          "sha256": "c8bde4a8ab46ed3523ff3aa5b864909e129c576ac5bcf3284cdc22cd24b8d70b"
         },
         "Authentication_Cheat_Sheet.md": {
-          "sha256": "3076f9393fda94bb0caf44de7ad3d024a3e52ad0d186cef44f91ee5b541d36bb"
+          "sha256": "5efff7cd4250a47449e77d99a8612e98935b31bdd1b9067e8ae3fff4bcfad329"
         },
         "Authorization_Cheat_Sheet.md": {
-          "sha256": "3292a02e4c3c8424e2f33b79585eb79320d4c1c48725e5564860c07d503ff88a"
+          "sha256": "e78a10eb9759a1fc7593ba1fc89a05b017e7e795ac16ad5496bdba86138d891f"
         },
         "CI_CD_Security_Cheat_Sheet.md": {
           "sha256": "935b4e2949ccd98d81bbd948a759fc9d3f56c9f9d26313ff7948f654606b7ef9"
         },
         "Clickjacking_Defense_Cheat_Sheet.md": {
-          "sha256": "b59652010ed05e2635d1ba1e360df446a33f37d1a0f92ba2e4a81652089874fa"
+          "sha256": "2331ef1ced95d52cca031d8603d00af281f8a8595b481176d92a49d658931bd2"
         },
         "Content_Security_Policy_Cheat_Sheet.md": {
-          "sha256": "3a75f908ad5aefa2f98c2c0047a57198cc1a6c7849b92af2242fa9900d8beaf4"
+          "sha256": "56382a0b056686796407b651fb519cf82ea8e0b5003dbd55ecf9a709af9a1b07"
         },
         "Cookie_Theft_Mitigation_Cheat_Sheet.md": {
           "sha256": "f02ae9e09dee0b4196969ecdbd94bf9267d50d7eaf5bb264cb7d702acea83d74"
         },
         "Credential_Stuffing_Prevention_Cheat_Sheet.md": {
-          "sha256": "c5c43213db1698deb92028b19b5ee922a3fd2dff3debb7a0d4f9d83608ea326e"
+          "sha256": "4d3524a775473d1f7a8d470a604226d2c4c063656863b7a9fba39aa9d7139e88"
         },
         "Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md": {
-          "sha256": "04a259ef84d8ab36e5df0533d84086ea6b3c51af38a82244822a92635fcf67ce"
+          "sha256": "8dafa056758968bcf6fdd46096a41ceba7969f755872324a6073979cead3dbee"
         },
         "Cross_Site_Scripting_Prevention_Cheat_Sheet.md": {
-          "sha256": "d297fa71c9d35ac4a9cd951a65b84d85ef029166e34948851cd3a3f16f7db89c"
+          "sha256": "b6cfca5d70ccb0906372af03ca8473728aa1749a7efbb02f8fcdc70a68f0947e"
         },
         "Cryptographic_Storage_Cheat_Sheet.md": {
-          "sha256": "cf8f887f2b586f7c75445cb8de57edeb289253873291405d4bbeb82c34edcd0a"
+          "sha256": "0f4b2e0c298b21cba95463218f3537306a96cfb49d1330e9b0a79389f9b061e6"
         },
         "DOM_based_XSS_Prevention_Cheat_Sheet.md": {
           "sha256": "7244e1cd39bccd8ef84fcd771d4fa8f5feabb2ddaf338e4b65baabab6d422d0c"
@@ -102,7 +103,7 @@
           "sha256": "0f527b1636adb44e305c97657b5cf84c0b5b60895ee5091f4b26baee0e271b6d"
         },
         "Forgot_Password_Cheat_Sheet.md": {
-          "sha256": "1121cb2a6f2944d14a9765cb91e155b080872d9fb2050249c09d0fcd33c234cd"
+          "sha256": "b10808d3a6653fc72f149d8b60a6f5bc1259575df8264cc34eb7d2ab3083ee47"
         },
         "GraphQL_Cheat_Sheet.md": {
           "sha256": "644ff319f6c2643cdf2dc33666951132904223e01ed69e627755c93288557114"
@@ -122,8 +123,8 @@
         "Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.md": {
           "sha256": "0a0056b89acc452b4e4fece79511387406480e912f4fce8247b1381446fc4bda"
         },
-        "JSON_Web_Token_for_Java_Cheat_Sheet.md": {
-          "sha256": "d82531df9cd6cea199383dda5d80da6e65d13cdb1e882e041a8dc49e40c7f955"
+        "JSON_Web_Token_Cheat_Sheet.md": {
+          "sha256": "13811661115436e33c145c9f48d44bfc4a7b20abf223454dbf76b4ca0930904e"
         },
         "Key_Management_Cheat_Sheet.md": {
           "sha256": "5c0081b8f00476e68618e4eb956b5a1968cc4d225c11943fe9ca8f6b148b6229"
@@ -132,7 +133,7 @@
           "sha256": "581a9bb96bc934fa277fde7610b6e05fdd485d79ff617851de99fc1262f56f74"
         },
         "Logging_Cheat_Sheet.md": {
-          "sha256": "342a2e9161f004a4aebe217da8476344e1b117f579f6252969e3b9054253eca7"
+          "sha256": "e3965a340b575bd232c7f5c7bf24d96a4e22bace1783a7a3a11a84d409e0b560"
         },
         "Logging_Vocabulary_Cheat_Sheet.md": {
           "sha256": "c1886d6c3dd28ffd66de17f135a40458ba423d813b29e7cb4480d7ec117abc89"
@@ -147,10 +148,10 @@
           "sha256": "8faca80517276ada9574c0f92b714e949d5ae5ea0f180ce2f92dd86c69df548b"
         },
         "Multifactor_Authentication_Cheat_Sheet.md": {
-          "sha256": "b842bd0e8408ab662a3101e90a7931e0c98e738437f53f9b1d79a8e3e004ed89"
+          "sha256": "0c1de91561bd8b449f5a27033e799c6928df3f24cb48a965994f615671612490"
         },
         "NPM_Security_Cheat_Sheet.md": {
-          "sha256": "8e01e07738f3d21f4ee193b6d8b8c849ca22416221d8b43b15adac2966429747"
+          "sha256": "0579f6df85963f8d7dec5aed6cce0dd73a488a60893a5f9f009683882bc13ebb"
         },
         "NoSQL_Security_Cheat_Sheet.md": {
           "sha256": "f853b952f9e71be15a862dde2332402aea7c8c5ae9107e2217a4e6fa35d13375"
@@ -171,7 +172,7 @@
           "sha256": "924ce01dfb7be9f051f16f9c10e19eea06ef285439977ec52955c924735b5c00"
         },
         "REST_Security_Cheat_Sheet.md": {
-          "sha256": "12e6d9bc27296ff24645f66cdd17862868fe0c0c46f0336f7e17c32c8e6cd9c0"
+          "sha256": "73185bf1a1163fb8b9cfcb7e034f84e32171289becc857f66947a61a87a4bb1d"
         },
         "SQL_Injection_Prevention_Cheat_Sheet.md": {
           "sha256": "77924b56a036b072bbc7a2b3bfc4f9f59fa5da92790c6690681574cb9457ec14"
@@ -182,11 +183,14 @@
         "Secure_Code_Review_Cheat_Sheet.md": {
           "sha256": "a3a2c91851dceaccff8ab684a56cdafa1006c9bb943c8d085622270f7872e34d"
         },
+        "Secure_Coding_with_AI_Cheat_Sheet.md": {
+          "sha256": "be07355a3bb0c077cea6ca6beef912b4abda712864e90645f46c29419e539505"
+        },
         "Secure_Product_Design_Cheat_Sheet.md": {
-          "sha256": "c2992a455f1f054324512d316cebca163241675e620512fa72d8364cd77ad57d"
+          "sha256": "a725b1092ac5b6bd33949bdf48983a026b1720c469192f0c48a93e1b31fe49da"
         },
         "Server_Side_Request_Forgery_Prevention_Cheat_Sheet.md": {
-          "sha256": "1af95247faed3376bbc090ab6257a41097d26f94eb360f46b8e1ce43371376c8"
+          "sha256": "d9323c8d09e4259ea597524fb1513422b8c82f96b287b79405f424b599e74da2"
         },
         "Session_Management_Cheat_Sheet.md": {
           "sha256": "bf6d4c21941abcb844ce884be7f20cf0a884d86c84eb6bd0df3827bcce55e7e2"
@@ -207,13 +211,13 @@
           "sha256": "bba73b7235823959a0129c8a15bf06fb95c9211d5ec74d3d267c9ebc0ebd022b"
         },
         "Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md": {
-          "sha256": "14e3d3509c6034f98a505bf4c86cac8b156f237e464eb8f93bb232f018f97d4b"
+          "sha256": "0259662b798890092317cd558de1da1fe3a7270cc865260d1f8d0efe50d86fe9"
         },
         "User_Privacy_Protection_Cheat_Sheet.md": {
           "sha256": "1d826e16303f2a24a2a8534363411f0cb8daba122d3edc1f332964f733a4827f"
         },
         "Vulnerable_Dependency_Management_Cheat_Sheet.md": {
-          "sha256": "dc9e0022fcb99199b101a5bc09d4d750488f377339ecd9b0e1c5abcf626bfb96"
+          "sha256": "acba542155a7b676280828e76e133d6aaa2a420263dcea2c0394dd78e0846787"
         },
         "WebSocket_Security_Cheat_Sheet.md": {
           "sha256": "c2eb30321fea9239bc4d7f3471a5a184e3066c18d7711bbcc592030ec694efa6"

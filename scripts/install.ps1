@@ -16,6 +16,8 @@
     Reinstall even when the installed version matches the released version.
 .PARAMETER NoWire
     Skip writing the AGENTS.md / GEMINI.md discovery pointer.
+.PARAMETER NoVerify
+    Skip SHA256 verification of the downloaded archive. Not recommended.
 .EXAMPLE
     pwsh -File scripts/install.ps1 -Client codex
 #>
@@ -24,7 +26,8 @@ param(
     [string]$Client = 'claude',
     [switch]$Local,
     [switch]$Force,
-    [switch]$NoWire
+    [switch]$NoWire,
+    [switch]$NoVerify
 )
 
 $ErrorActionPreference = 'Stop'
@@ -74,8 +77,44 @@ $tmp = Join-Path $env:TEMP ("secure-webapp-" + [guid]::NewGuid().ToString())
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 $archive = Join-Path $tmp 'secure-webapp.skill'
 
+$releaseBase = 'https://github.com/hov172/secure-webapp-skill/releases/latest/download'
 Write-Host "Downloading latest release..."
-Invoke-WebRequest -Uri 'https://github.com/hov172/secure-webapp-skill/releases/latest/download/secure-webapp.skill' -OutFile $archive
+Invoke-WebRequest -Uri "$releaseBase/secure-webapp.skill" -OutFile $archive
+
+# Verify against the SHA256SUMS published with the same release. Fails closed;
+# -NoVerify is the documented escape hatch.
+if (-not $NoVerify) {
+    $sums = Join-Path $tmp 'SHA256SUMS'
+    try {
+        Invoke-WebRequest -Uri "$releaseBase/SHA256SUMS" -OutFile $sums
+    } catch {
+        Remove-Item -Recurse -Force $tmp
+        throw "Could not download SHA256SUMS for this release; refusing to install. Use -NoVerify to override."
+    }
+
+    $expected = $null
+    foreach ($line in Get-Content $sums) {
+        $parts = $line -split '\s+', 2
+        if ($parts.Count -eq 2 -and $parts[1].Trim().TrimStart('*') -like '*secure-webapp.skill') {
+            $expected = $parts[0].Trim()
+            break
+        }
+    }
+    if (-not $expected) {
+        Remove-Item -Recurse -Force $tmp
+        throw "SHA256SUMS has no entry for secure-webapp.skill; refusing to install."
+    }
+
+    # Hex digests compare case-insensitively; PowerShell's -ne is already that.
+    $actual = (Get-FileHash -Algorithm SHA256 -Path $archive).Hash
+    if ($actual -ne $expected) {
+        Remove-Item -Recurse -Force $tmp
+        throw "Checksum mismatch - refusing to install. Expected $expected, got $actual."
+    }
+    Write-Host "Checksum verified (sha256 $($actual.Substring(0,16))...)."
+} else {
+    Write-Host "Skipping checksum verification (-NoVerify)."
+}
 
 # Read the version bundled in the downloaded archive.
 $newVer = $null

@@ -83,7 +83,7 @@
         "Subdomain_Takeover_Prevention_Cheat_Sheet.md",
         "Unvalidated_Redirects_and_Forwards_Cheat_Sheet.md",
         "Server_Side_Request_Forgery_Prevention_Cheat_Sheet.md",
-        "JSON_Web_Token_for_Java_Cheat_Sheet.md",
+        "JSON_Web_Token_Cheat_Sheet.md",
         "OAuth2_Cheat_Sheet.md",
         "Cryptographic_Storage_Cheat_Sheet.md",
         "Key_Management_Cheat_Sheet.md",
@@ -106,7 +106,8 @@
         "User_Privacy_Protection_Cheat_Sheet.md",
         "LLM_Prompt_Injection_Prevention_Cheat_Sheet.md",
         "AI_Agent_Security_Cheat_Sheet.md",
-        "MCP_Security_Cheat_Sheet.md"
+        "MCP_Security_Cheat_Sheet.md",
+        "Secure_Coding_with_AI_Cheat_Sheet.md"
       ]
     },
     "wstg_selected": {

@@ -22,8 +22,17 @@ Usage:
     python scripts/refresh.py --quiet     # minimal output
     python scripts/refresh.py --dry-run   # show what would be fetched, fetch nothing
     python scripts/refresh.py --offline   # use cached _sources/ only, regenerate CHANGES from disk
+    python scripts/refresh.py --strict    # treat any fetch error as fatal
 
-Exits 0 on success, non-zero on network errors or manifest problems.
+Exit codes:
+    0  refresh usable — every source still has content, even if individual files
+       failed (upstream renames and transient 404s are expected and survivable;
+       the cached copy is kept and the failure is reported in CHANGES.md).
+    1  refresh unusable — a manifest problem, or a source that came back with no
+       usable files at all (bad base_url, upstream repo moved, network down).
+
+A single missing upstream file must never block the whole refresh: that failure
+mode silently froze this cache for 72 days in mid-2026.
 
 Recommended cadence: quarterly, or on demand when OWASP announces a major release
 (new Top 10 edition, new ASVS version, etc.).
@@ -34,6 +43,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
 import time
 import urllib.error
@@ -131,7 +141,14 @@ def diff_summary(old: str | None, new: str) -> str:
     return summary
 
 
-def refresh(*, quiet: bool, dry_run: bool, offline: bool) -> int:
+def annotate_ci(level: str, message: str) -> None:
+    """Emit a GitHub Actions annotation so non-fatal problems are still visible
+    in the workflow summary instead of scrolling past in the log."""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        print(f"::{level}::{message}", flush=True)
+
+
+def refresh(*, quiet: bool, dry_run: bool, offline: bool, strict: bool) -> int:
     manifest = load_manifest()
     state = load_state()
     new_state: dict = {"sources": {}, "last_run": datetime.now(timezone.utc).isoformat()}
@@ -145,6 +162,8 @@ def refresh(*, quiet: bool, dry_run: bool, offline: bool) -> int:
     # Per-source results, used to render CHANGES.md
     results: dict[str, dict] = {}
     network_errors: list[str] = []
+    # Sources that came back with nothing usable at all — the only fatal case.
+    dead_sources: list[str] = []
 
     for source_name, source_def in sources.items():
         if source_name.startswith("_"):
@@ -211,6 +230,20 @@ def refresh(*, quiet: bool, dry_run: bool, offline: bool) -> int:
             per_file_results.append({"filename": filename, "summary": summary})
             log(f"   ✓ {filename} — {summary}", quiet=quiet)
 
+        # Drop cached files the manifest no longer tracks, so a rename upstream
+        # doesn't leave a stale copy behind pretending to be current.
+        if not dry_run and not offline:
+            tracked = {(source_dir / name).resolve() for name in files}
+            for cached in source_dir.rglob("*"):
+                if cached.is_file() and cached.resolve() not in tracked:
+                    cached.unlink()
+                    log(f"   ✂ pruned untracked cache file {cached.name}", quiet=quiet)
+
+        # A source with no usable files means the whole source is gone (moved
+        # repo, bad base_url, network down) rather than one file being renamed.
+        if not dry_run and files and not new_files:
+            dead_sources.append(source_name)
+
         new_state["sources"][source_name] = {
             "label": label,
             "repository_url": repository_url,
@@ -225,14 +258,38 @@ def refresh(*, quiet: bool, dry_run: bool, offline: bool) -> int:
 
     # Write CHANGES.md
     if not dry_run:
+        # Persisted so check_skill.py can report unresolved manifest rot without
+        # re-hitting the network.
+        new_state["fetch_errors"] = network_errors
         write_changes_md(results, network_errors, prev_run=state.get("last_run"))
         save_state(new_state)
         log(f"\n📝 Wrote {CHANGES_PATH.relative_to(REPO_ROOT)}", quiet=quiet)
         log(f"💾 Updated {STATE_PATH.relative_to(REPO_ROOT)}", quiet=quiet)
 
     if network_errors:
-        log(f"\n⚠️  {len(network_errors)} fetch error(s). See CHANGES.md for details.", quiet=quiet)
+        # Always visible, even under --quiet: a silent partial failure is how
+        # this cache went stale for 72 days without anyone noticing.
+        print(
+            f"⚠️  {len(network_errors)} fetch error(s); cached copies kept. See _sources/CHANGES.md.",
+            flush=True,
+        )
+        for err in network_errors:
+            print(f"    - {err}", flush=True)
+        annotate_ci(
+            "warning",
+            f"refresh.py: {len(network_errors)} upstream file(s) could not be fetched "
+            "(likely renamed upstream). Update scripts/manifest.json.",
+        )
+
+    if dead_sources:
+        annotate_ci("error", f"refresh.py: no usable files for source(s): {', '.join(dead_sources)}")
+        print(f"❌ No usable files for source(s): {', '.join(dead_sources)}", flush=True)
         return 1
+
+    if network_errors and strict:
+        print("❌ --strict: failing because of the fetch errors above.", flush=True)
+        return 1
+
     log("\n✅ Refresh complete.", quiet=quiet)
     log("   Review _sources/CHANGES.md, then update references/ as needed.", quiet=quiet)
     return 0
@@ -294,10 +351,13 @@ def main() -> None:
     parser.add_argument("--quiet", action="store_true", help="minimal output")
     parser.add_argument("--dry-run", action="store_true", help="show what would happen, fetch nothing")
     parser.add_argument("--offline", action="store_true", help="use cached files; regenerate CHANGES from disk")
+    parser.add_argument("--strict", action="store_true", help="treat any fetch error as fatal")
     args = parser.parse_args()
     if args.dry_run and args.offline:
         sys.exit("❌ --dry-run and --offline are mutually exclusive.")
-    sys.exit(refresh(quiet=args.quiet, dry_run=args.dry_run, offline=args.offline))
+    sys.exit(
+        refresh(quiet=args.quiet, dry_run=args.dry_run, offline=args.offline, strict=args.strict)
+    )
 
 
 if __name__ == "__main__":

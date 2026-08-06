@@ -14,10 +14,11 @@ users: see `GEMINI.md`. Claude Code users: the skill is auto-discovered from
 Engage `secure-webapp` whenever you work on web-application code or design that
 touches: authentication, sessions, tokens (JWT/OAuth/OIDC), user input,
 database queries, file uploads, API endpoints, cookies/CORS/CSP/headers,
-secrets, redirects, external URL fetches, logging/errors, dependencies, or
-threat modeling — and for vulnerability classes such as XSS, SQLi, IDOR, CSRF,
-SSRF, open redirect, prototype pollution, deserialization, and supply-chain
-risk.
+secrets, redirects, external URL fetches, logging/errors, dependencies, threat
+modeling, or LLM/AI features (prompt construction, RAG, agent tools, MCP
+servers) — and for vulnerability classes such as XSS, SQLi, IDOR, CSRF, SSRF,
+open redirect, prototype pollution, deserialization, prompt injection, and
+supply-chain risk.
 
 When that applies:
 

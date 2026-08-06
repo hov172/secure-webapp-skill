@@ -26,7 +26,10 @@ const DISCOVERY = {
 
 const sourceDir = path.join(__dirname, '..');
 
-// Files and directories to copy from the package into an install.
+// Files and directories to copy from the package into an install. This must
+// stay in sync with scripts/package_skill.py so that an `npx` install and a
+// released .skill archive produce the same tree — $secure-webapp maintain and
+// scripts/setup-auto-update.js both depend on scripts/ being present.
 const itemsToCopy = [
     'SKILL.md',
     'AGENTS.md',
@@ -35,8 +38,18 @@ const itemsToCopy = [
     'references',
     'assets',
     'agents',
+    'scripts',
+    'LICENSE',
     'LICENSE.txt',
 ];
+
+// Maintainer-only files that live under scripts/ but are not part of an install.
+// Mirrors the exclusions in scripts/package_skill.py.
+const EXCLUDED_FROM_COPY = new Set([
+    'scripts/README.md',
+    'scripts/install.sh',
+    'scripts/install.ps1',
+]);
 
 const BLOCK_BEGIN = '<!-- secure-webapp:begin (managed by the secure-webapp installer) -->';
 const BLOCK_END = '<!-- secure-webapp:end -->';
@@ -59,7 +72,15 @@ function sourceVersion() {
     }
 }
 
+function isExcluded(src) {
+    const rel = path.relative(sourceDir, src).split(path.sep).join('/');
+    if (EXCLUDED_FROM_COPY.has(rel)) return true;
+    const base = path.basename(src);
+    return base === '__pycache__' || base === '.DS_Store' || base.endsWith('.pyc');
+}
+
 function copyRecursiveSync(src, dest) {
+    if (isExcluded(src)) return;
     const exists = fs.existsSync(src);
     const stats = exists && fs.statSync(src);
     const isDirectory = exists && stats.isDirectory();

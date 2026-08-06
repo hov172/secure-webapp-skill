@@ -4,12 +4,19 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+# The upstream cache is refreshed weekly. Anything older than this means the
+# refresh pipeline is broken and nobody noticed — which is exactly what happened
+# for 72 days in mid-2026, so it is now a build failure rather than a surprise.
+MAX_SOURCE_AGE_DAYS = int(os.environ.get("SKILL_MAX_SOURCE_AGE_DAYS", "30"))
 
 
 def fail(message: str) -> None:
@@ -37,6 +44,47 @@ def frontmatter() -> dict[str, str]:
     return values
 
 
+def declared_modes(skill_name: str, skill_text: str) -> list[str]:
+    """The invocation modes SKILL.md actually documents, in order.
+
+    Derived rather than hardcoded: three copies of this list live in the
+    installers, and a hardcoded fourth copy here is how `report`, `remediate`
+    and `update` shipped without the validator ever noticing.
+    """
+    modes: list[str] = []
+    for match in re.finditer(rf"^- `\${re.escape(skill_name)} ([a-z-]+)`", skill_text, re.M):
+        if match.group(1) not in modes:
+            modes.append(match.group(1))
+    if not modes:
+        fail("SKILL.md documents no `$secure-webapp <mode>` invocation options")
+    return modes
+
+
+def check_mode_consistency(skill_name: str, skill_text: str) -> None:
+    """Every documented mode must be advertised everywhere users discover it."""
+    modes = declared_modes(skill_name, skill_text)
+
+    # The installers write a discovery block into AGENTS.md / GEMINI.md that
+    # lists the modes. If SKILL.md gains a mode, those lists must gain it too.
+    consumers = {
+        "bin/install.js": (ROOT / "bin/install.js").read_text(encoding="utf-8"),
+        "scripts/install.sh": (ROOT / "scripts/install.sh").read_text(encoding="utf-8"),
+        "scripts/install.ps1": (ROOT / "scripts/install.ps1").read_text(encoding="utf-8"),
+        "AGENTS.md": (ROOT / "AGENTS.md").read_text(encoding="utf-8"),
+        "GEMINI.md": (ROOT / "GEMINI.md").read_text(encoding="utf-8"),
+        "README.md": (ROOT / "README.md").read_text(encoding="utf-8"),
+    }
+    for name, text in consumers.items():
+        for mode in modes:
+            if mode not in text:
+                fail(f"{name} does not mention the `${skill_name} {mode}` mode documented in SKILL.md")
+
+    # Every mode that routes to an asset must have that asset present.
+    for rel in re.findall(r"`(assets/[^`]+)`", skill_text):
+        if not (ROOT / rel).exists():
+            fail(f"SKILL.md routes to a missing asset: {rel}")
+
+
 def check_required_paths(skill_name: str) -> None:
     required = [
         "SKILL.md",
@@ -51,12 +99,16 @@ def check_required_paths(skill_name: str) -> None:
         "assets/audit-checklist.md",
         "assets/secure-webapp-small.svg",
         "assets/secure-webapp-large.svg",
+        "assets/remediate-checklist.md",
+        "assets/report-template.md",
         "scripts/check_skill.py",
         "scripts/package_skill.py",
         "scripts/release_checksums.py",
         "scripts/refresh.py",
-        "scripts/sync_references.py",
+        "scripts/eval_skill.py",
         "scripts/manifest.json",
+        "tests/expectations.json",
+        "tests/README.md",
         "scripts/README.md",
         "scripts/setup-auto-update.js",
         "scripts/install.ps1",
@@ -76,6 +128,7 @@ def check_required_paths(skill_name: str) -> None:
         "references/secure-coding.md",
         "references/supply-chain.md",
         "references/tokens-and-oauth.md",
+        "references/ai-and-llm.md",
     ]
     for rel in required:
         if not (ROOT / rel).exists():
@@ -86,9 +139,7 @@ def check_required_paths(skill_name: str) -> None:
     for rel in sorted(referenced):
         if not (ROOT / rel).exists():
             fail(f"SKILL.md references missing path: {rel}")
-    for option in ("audit", "quick-check", "harden", "design-review", "maintain"):
-        if f"$secure-webapp {option}" not in skill_text:
-            fail(f"SKILL.md missing explicit invocation option: {option}")
+    check_mode_consistency(skill_name, skill_text)
 
     for agent_manifest in ("agents/openai.yaml", "agents/gemini.yaml", "agents/claude.yaml"):
         manifest_text = (ROOT / agent_manifest).read_text(encoding="utf-8")
@@ -149,6 +200,43 @@ def check_manifest() -> None:
             fail(f"manifest source {name} has no files")
 
 
+def check_source_freshness() -> None:
+    """Fail if the upstream OWASP cache has gone stale.
+
+    Skipped when _sources/ is absent — the release workflow deliberately removes
+    it before packaging, and a fresh clone may not have refreshed yet.
+    """
+    state_path = ROOT / "_sources/_state.json"
+    if not state_path.exists():
+        return
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        fail(f"_sources/_state.json is invalid JSON: {exc}")
+    last_run = state.get("last_run")
+    if not last_run:
+        fail("_sources/_state.json has no last_run; run scripts/refresh.py")
+    try:
+        when = datetime.fromisoformat(last_run)
+    except ValueError:
+        fail(f"_sources/_state.json last_run is not an ISO timestamp: {last_run}")
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    age_days = (datetime.now(timezone.utc) - when).days
+    if age_days > MAX_SOURCE_AGE_DAYS:
+        fail(
+            f"upstream OWASP cache is {age_days} days old (limit {MAX_SOURCE_AGE_DAYS}); "
+            "the weekly refresh is not landing — run scripts/refresh.py and check "
+            ".github/workflows/refresh-owasp.yml"
+        )
+    errors = state.get("fetch_errors") or []
+    if errors:
+        print(f"WARN: {len(errors)} upstream file(s) could not be fetched on the last refresh:")
+        for err in errors:
+            print(f"  - {err}")
+        print("      Update scripts/manifest.json if a file was renamed upstream.")
+
+
 def check_hygiene() -> None:
     forbidden_names = {"__pycache__", ".package-build", ".skill-restore"}
     forbidden_suffixes = {".pyc", ".pyo"}
@@ -193,26 +281,52 @@ def check_hygiene() -> None:
         text = refresh_workflow.read_text(encoding="utf-8")
         for expected in (
             "cron: \"0 9 * * 1\"",
-            "scripts/refresh.py --quiet",
-            "scripts/sync_references.py",
+            "scripts/refresh.py",
             "scripts/package_skill.py",
             "scripts/release_checksums.py",
-            "gh pr merge",
             "refresh/owasp-sources",
             "_sources/**",
-            "references/**",
             "secure-webapp.skill",
             "SHA256SUMS",
-            "deterministic reference updates",
+            "gh issue",
         ):
             if expected not in text:
                 fail(f"refresh workflow missing {expected}")
+        # Upstream content must not reach a shipped artifact unreviewed.
+        if "gh pr merge" in text:
+            fail("refresh workflow must not auto-merge; upstream changes need human review")
+        add_paths = re.search(r"add-paths:\s*\|\n((?:\s{12}\S.*\n)+)", text)
+        if not add_paths:
+            fail("refresh workflow has no add-paths block")
+        if "references/" in add_paths.group(1):
+            fail("refresh workflow must not commit references/; those are curated by hand")
     release_workflow = ROOT / ".github/workflows/release.yml"
     if release_workflow.exists():
         text = release_workflow.read_text(encoding="utf-8")
-        for expected in ("tags:", "scripts/package_skill.py", "scripts/release_checksums.py", "scripts/sync_references.py", "secure-webapp.skill", "SHA256SUMS"):
+        for expected in (
+            "tags:",
+            "scripts/package_skill.py",
+            "scripts/release_checksums.py",
+            "scripts/eval_skill.py --check",
+            "secure-webapp.skill",
+            "SHA256SUMS",
+        ):
             if expected not in text:
                 fail(f"release workflow missing {expected}")
+    validate_workflow = ROOT / ".github/workflows/validate.yml"
+    if validate_workflow.exists():
+        text = validate_workflow.read_text(encoding="utf-8")
+        if "scripts/eval_skill.py --check" not in text:
+            fail("validate workflow must run the detection-corpus gate")
+    # Installers must verify what they download; this is a security skill.
+    for rel, needles in (
+        ("scripts/install.sh", ("SHA256SUMS", "verify_checksum")),
+        ("scripts/install.ps1", ("SHA256SUMS", "Get-FileHash")),
+    ):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                fail(f"{rel} must verify the downloaded archive ({needle} missing)")
     dependabot = ROOT / ".github/dependabot.yml"
     if dependabot.exists():
         text = dependabot.read_text(encoding="utf-8")
@@ -244,15 +358,34 @@ def check_package(skill_name: str) -> None:
         f"{prefix}scripts/release_checksums.py",
         f"{prefix}scripts/refresh.py",
         f"{prefix}scripts/setup-auto-update.js",
+        f"{prefix}scripts/manifest.json",
         f"{prefix}assets/audit-checklist.md",
+        f"{prefix}assets/remediate-checklist.md",
+        f"{prefix}assets/report-template.md",
         f"{prefix}assets/secure-webapp-small.svg",
         f"{prefix}assets/secure-webapp-large.svg",
+        f"{prefix}references/ai-and-llm.md",
+        f"{prefix}LICENSE",
     ):
         if needed not in names:
             fail(f"package missing {needed}")
+
+    # An npx install and a released archive must produce the same tree.
+    installer = (ROOT / "bin/install.js").read_text(encoding="utf-8")
+    for top_level in ("references", "assets", "agents", "scripts"):
+        if f"'{top_level}'" not in installer:
+            fail(f"bin/install.js does not copy {top_level}/; npx installs would diverge from the .skill archive")
+
     for name in names:
         if name.startswith(f"{prefix}_sources/"):
             fail("package must not include _sources maintenance cache")
+        if name.startswith(f"{prefix}tests/"):
+            fail("package must not include the detection corpus")
+        if name.startswith(f"{prefix}bin/") or name in {
+            f"{prefix}scripts/install.sh",
+            f"{prefix}scripts/install.ps1",
+        }:
+            fail(f"package must not include installer-only file: {name}")
         if name == f"{prefix}README.md":
             fail("package must not include GitHub-facing README.md")
         if name == f"{prefix}.gitignore":
@@ -270,6 +403,7 @@ def main() -> None:
     skill_name = values["name"]
     check_required_paths(skill_name)
     check_manifest()
+    check_source_freshness()
     check_hygiene()
     check_package(skill_name)
     print(f"OK: {skill_name} skill validation passed")

@@ -53,6 +53,9 @@ Check in this order; load named references for depth only when needed.
 11. **Errors / Logging / Exceptional Conditions** (`references/logging-and-errors.md`)
     Check failure paths and logs. Findings: catch-all returns success, security controls fail open, multi-step operations lack transactions, no cleanup on exceptions, missing timeouts/circuit breakers, secrets in logs, stack traces in responses, missing security-event logs/alerts.
 
+12. **AI / LLM Features** (`references/ai-and-llm.md`) — skip if the app has no model integration.
+    Check prompt construction, retrieval, agent tools, and where model output lands. Findings: user or retrieved content concatenated into the system prompt, secrets or other users' data in the context window, tool calls authorized against the service account rather than the end user, generic `run_shell`/`execute_sql`/`http_request` tools, unscoped retrieval across tenants, model output reaching `innerHTML`/shell/SQL/`fetch` unchecked, unsanitized rendered markdown enabling exfiltration, no rate limit or cost cap on model endpoints, third-party MCP/tool servers unpinned or their results treated as trusted context.
+
 ## Report Format
 
 Use:

@@ -16,7 +16,7 @@ At the start of each round, print:
 
 ### Step 1 — Audit
 
-Run a full audit using all 11 categories from `audit-checklist.md`. For each finding, classify it immediately:
+Run a full audit using all 12 categories from `audit-checklist.md` (category 12 is skipped when the app has no LLM/AI integration). For each finding, classify it immediately:
 
 - **code-fixable**: can be fully resolved by changing code in this repo right now
 - **open-item**: requires an infrastructure change, architectural/product decision, upstream dependency patch, or manual risk assessment
