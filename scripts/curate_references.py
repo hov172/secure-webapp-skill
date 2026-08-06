@@ -157,8 +157,14 @@ def changed_sources() -> set[str]:
         # Renames appear as "old -> new"; take the destination.
         if " -> " in path:
             path = path.split(" -> ", 1)[1]
-        if path.startswith("_sources/"):
-            changed.add(path[len("_sources/") :])
+        if not path.startswith("_sources/"):
+            continue
+        rel = path[len("_sources/") :]
+        # Real sources always live at <source-name>/<file>. Top-level entries are
+        # refresh.py's own bookkeeping (_state.json, CHANGES.md, CURATION.md).
+        if "/" not in rel:
+            continue
+        changed.add(rel)
     return changed
 
 
