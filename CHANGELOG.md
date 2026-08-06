@@ -3,6 +3,44 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.11
+
+### Removed
+
+- **`docs/superpowers/`** — two implementation-plan artifacts from 5 May for the
+  `remediate` mode that shipped that same day, complete with agent checkbox
+  tracking. Scaffolding for finished work, referenced by nothing, superseded by
+  the code and this changelog. Git history keeps them.
+
+### Changed
+
+- **CHANGELOG opens with an orientation for the 1.4.x series.** Eleven releases
+  in one session is hard to read as eleven entries; it is four pieces of work.
+  Individual version entries are untouched, since published releases need to stay
+  traceable.
+
+## The 1.4.x series
+
+Eleven releases in one working session, which is more than the version numbers
+suggest. If you are catching up, read it as four pieces of work rather than
+eleven changes:
+
+- **1.4.0** — the substance. The weekly OWASP refresh had been failing since
+  6 July on an upstream file rename, and the reference sync it fed had never
+  propagated a guidance change in twelve runs. Repairs the pipeline, deletes the
+  sync, adds `references/ai-and-llm.md`, and introduces the detection corpus.
+- **1.4.1 – 1.4.6** — supply-chain and build integrity: tagged action pins,
+  reproducible archives, installer checksum verification, agent-driven curation
+  bounded by `verify_agent_changes.py`, and an end to the weekly no-op commit.
+- **1.4.7 – 1.4.9** — measurement. Adds `tests/clean/` so false positives count,
+  makes blinding reproducible, and acts on what the first blind evaluation
+  exposed: guidance that said what to fix without saying what it costs.
+- **1.4.10** — documentation catching up with all of the above.
+
+The through-line: several of these releases exist because a measurement failed
+and the failure pointed at the skill rather than the test. That is the loop
+working, and it is the reason to keep the corpus honest.
+
 ## 1.4.10
 
 ### Changed
