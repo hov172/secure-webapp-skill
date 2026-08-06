@@ -786,9 +786,38 @@ sent.
 > having run the curation step. Blind writes to the references are the failure
 > mode this replaced; the guard exists so it cannot come back.
 
-**To enable in CI:** set the `ANTHROPIC_API_KEY` repository secret (optionally
-the `CURATION_MODEL` repository variable). Leave it unset and the weekly refresh
-works exactly as it does now, minus the proposed edits.
+#### Curating without storing a credential
+
+**Nothing in this repository requires an API key.** The weekly refresh,
+validation, the detection corpus, packaging, and releases all run without one.
+Automated curation is the single optional extra.
+
+If you would rather not put a credential in the repository — a reasonable
+default for a security-focused project — curate locally instead. You get the
+*better* version of the agent path: full context, a real conversation, and you
+watching it.
+
+```sh
+python3 scripts/refresh.py                  # fetch upstream, write _sources/CHANGES.md
+# then, in Claude Code / Codex / Gemini:
+#   "read _sources/CHANGES.md and update the affected references/*.md"
+python3 scripts/verify_agent_changes.py     # same bounds CI would apply
+python3 scripts/check_skill.py
+```
+
+`verify_agent_changes.py` enforces the identical boundary locally that the CI
+workflow enforces: only `references/` may change, and the tree must still
+validate. So a local agent session gets the same guarantee without a secret
+existing anywhere.
+
+`scripts/curate_references.py --print-prompt` is also useful here — it renders
+the exact curation brief (reference + upstream diff + full source text) for one
+file, which you can hand to any agent without an API call.
+
+**If you do want it automated in CI:** set the `ANTHROPIC_API_KEY` repository
+secret (or `CLAUDE_CODE_OAUTH_TOKEN`), optionally the `CURATION_MODEL` variable.
+Leave both unset and the weekly refresh works exactly as it does now, minus the
+proposed edits — the curation step no-ops and exits 0.
 
 #### The agent variant (manual only)
 

@@ -110,9 +110,23 @@ Tunable via environment: `CURATION_MODEL` (default `claude-opus-5`),
 `CURATION_FULL_SOURCE_MAX_CHARS` (default 45000), `CURATION_MAX_FULL_SOURCES`
 (default 3).
 
-In CI, set the `ANTHROPIC_API_KEY` repository secret to enable it; leave it unset
-and the weekly refresh keeps working exactly as it does today, just without
-proposed edits.
+In CI, set the `ANTHROPIC_API_KEY` repository secret (or
+`CLAUDE_CODE_OAUTH_TOKEN`) to enable it; leave both unset and the weekly refresh
+keeps working exactly as it does today, just without proposed edits.
+
+**No credential required.** Nothing else in this repository needs one — refresh,
+validation, the corpus, packaging and releases all work without it. To curate
+without storing a secret anywhere, do it locally:
+
+```sh
+python scripts/refresh.py
+# then, in your agent: "read _sources/CHANGES.md and update the affected references"
+python scripts/verify_agent_changes.py
+```
+
+That applies the same bounds locally that CI would, so a supervised local
+session is strictly the better version of the agent path: more context, a real
+conversation, and no secret in the repository.
 
 ### `verify_agent_changes.py`
 

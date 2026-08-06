@@ -37,6 +37,34 @@ jobs:
         with:
           persist-credentials: false
 
+      # Fail fast and legibly rather than dying inside the action with an auth
+      # error. This repository is designed to work with no credential at all.
+      - name: Check credentials are configured
+        env:
+          HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}
+        run: |
+          if [ "$HAS_KEY" != "true" ] && [ "$HAS_TOKEN" != "true" ]; then
+            echo "::error::No ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret is set."
+            cat <<'EOF'
+
+          This workflow is optional. Nothing else in this repository needs a
+          credential: the weekly refresh, validation, the detection corpus, and
+          the release pipeline all run without one.
+
+          To curate references without storing any secret, do it locally instead:
+
+              python3 scripts/refresh.py
+              # then, in Claude Code: "read _sources/CHANGES.md and update the
+              # affected references/*.md"
+              python3 scripts/verify_agent_changes.py
+
+          verify_agent_changes.py applies the same bounds locally that this
+          workflow applies in CI.
+          EOF
+            exit 1
+          fi
+
       - name: Refresh upstream OWASP material
         if: inputs.refresh_first
         run: python3 scripts/refresh.py
@@ -52,7 +80,10 @@ jobs:
       - name: Curate with Claude Code
         uses: anthropics/claude-code-action@c038e4dcdedfbbca18dfb17df35a17e40ded4ddc # v1.0.186
         with:
+          # Either credential works; set whichever you prefer, or neither and
+          # curate locally instead.
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: ${{ inputs.model && format('--model {0}', inputs.model) || '' }}
           prompt: |
             You are maintaining the curated reference files of the `secure-webapp`
