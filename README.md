@@ -810,9 +810,21 @@ workflow enforces: only `references/` may change, and the tree must still
 validate. So a local agent session gets the same guarantee without a secret
 existing anywhere.
 
-`scripts/curate_references.py --print-prompt` is also useful here — it renders
-the exact curation brief (reference + upstream diff + full source text) for one
-file, which you can hand to any agent without an API call.
+This works with **any** agent, not just Claude Code. `curate_references.py` can
+render self-contained curation briefs that Codex, Gemini CLI, or anything else
+can consume — no Anthropic API involved:
+
+```sh
+python3 scripts/refresh.py
+python3 scripts/curate_references.py --write-briefs    # -> _sources/briefs/*.brief.md
+```
+
+Each brief carries the curation instructions, the current reference, the
+upstream diff, and the full changed source text. Hand one to your agent, apply
+its edits, then run `verify_agent_changes.py`. Briefs are gitignored and can
+never reach the package.
+
+`--print-prompt` renders the same thing for a single reference to stdout.
 
 **If you do want it automated in CI:** set the `ANTHROPIC_API_KEY` repository
 secret (or `CLAUDE_CODE_OAUTH_TOKEN`), optionally the `CURATION_MODEL` variable.

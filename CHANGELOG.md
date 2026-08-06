@@ -3,6 +3,31 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.4
+
+Closes the Codex/Gemini gaps. End users on those agents were already fully
+supported — verified by installing for both and inspecting the discovery blocks
+— but two things assumed Claude.
+
+### Fixed
+
+- **Codex and Gemini users were getting a stale trigger list.** The installers
+  embed their own copy of the "when to use this skill" text in the
+  `AGENTS.md` / `GEMINI.md` discovery block, and it was never updated when AI/LLM
+  coverage landed in 1.4.0. Those users' agents were therefore *less* likely to
+  fire the skill on prompt-injection or agent-tool work — precisely the users
+  most likely to need it. All three installers now match `SKILL.md`, and
+  `check_skill.py` fails the build if the four copies drift again.
+
+### Added
+
+- **`curate_references.py --write-briefs`** renders one self-contained curation
+  brief per in-scope reference — instructions, current reference, upstream diff,
+  and full changed source text — with no API call. Hand a brief to Codex, Gemini
+  CLI, or any other agent, apply its edits, then run `verify_agent_changes.py`,
+  which is agent-agnostic already. Briefs are gitignored and `_sources/` never
+  ships, so they cannot leak into the package.
+
 ## 1.4.3
 
 Adds the agent variant of reference curation, deliberately kept off the schedule.

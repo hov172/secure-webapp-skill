@@ -371,6 +371,14 @@ def main() -> int:
         action="store_true",
         help="print the exact prompt for the first in-scope reference and exit; calls no API",
     )
+    parser.add_argument(
+        "--write-briefs",
+        metavar="DIR",
+        nargs="?",
+        const="_sources/briefs",
+        help="write one self-contained curation brief per in-scope reference for any "
+        "agent to consume (Codex, Gemini, ...); calls no API. Default DIR: _sources/briefs",
+    )
     parser.add_argument("--model", default=os.environ.get("CURATION_MODEL", DEFAULT_MODEL))
     args = parser.parse_args()
 
@@ -411,6 +419,34 @@ def main() -> int:
         print(f"  - references/{name}  ({len(hits)} changed source(s))")
 
     known_references = {p.name for p in REFERENCES.glob("*.md")}
+
+    if args.write_briefs:
+        # Model-agnostic escape hatch: dump one self-contained curation brief per
+        # in-scope reference, so Codex, Gemini, or any other agent can do this
+        # work without an Anthropic API key or this script calling anything.
+        out_dir = ROOT / args.write_briefs
+        out_dir.mkdir(parents=True, exist_ok=True)
+        written = []
+        for name, hits in candidates:
+            brief = SYSTEM_PROMPT + "\n\n" + build_prompt(
+                name,
+                (REFERENCES / name).read_text(encoding="utf-8"),
+                diff_for(hits),
+                full_sources_for(hits),
+                siblings_for(name, hits, reference_map),
+            )
+            target = out_dir / f"{name.removesuffix('.md')}.brief.md"
+            target.write_text(brief, encoding="utf-8")
+            written.append(target.relative_to(ROOT).as_posix())
+        print(f"\nWrote {len(written)} curation brief(s):")
+        for rel in written:
+            print(f"  {rel}")
+        print(
+            "\nHand each brief to whichever agent you use (Codex, Gemini, Claude Code, ...),\n"
+            "apply its edits to the matching references/*.md, then run:\n"
+            "  python3 scripts/verify_agent_changes.py"
+        )
+        return 0
 
     if args.print_prompt:
         name, hits = candidates[0]

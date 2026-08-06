@@ -160,7 +160,7 @@ function discoveryBlock(client, discoveryFile, targetDir) {
     const trigger =
         'web-app code or design involving auth, sessions, tokens (JWT/OAuth/OIDC), user input, ' +
         'DB queries, file uploads, API endpoints, cookies/CORS/CSP/CSRF, security headers, secrets, ' +
-        'redirects, SSRF, logging, dependencies, or threat modeling';
+        'redirects, SSRF, logging, dependencies, threat modeling, or LLM/AI features (prompt construction, RAG, agent tools, MCP servers)';
     const modes = '`$secure-webapp audit | quick-check | harden | remediate | design-review | report | update | maintain`';
     // Gemini supports `@path` context imports; Codex reads the file directly.
     const importLine = client === 'gemini' ? `@${relPosix}\n\n` : '';

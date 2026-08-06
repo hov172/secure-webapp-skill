@@ -54,7 +54,7 @@ function Set-Discovery {
 <!-- secure-webapp:begin (managed by the secure-webapp installer) -->
 ## secure-webapp skill
 
-$($importLine)The **secure-webapp** skill (OWASP-grounded web-app security guidance) is installed at ``$rel``. When working on web-app code or design involving auth, sessions, tokens (JWT/OAuth/OIDC), user input, DB queries, file uploads, API endpoints, cookies/CORS/CSP/CSRF, security headers, secrets, redirects, SSRF, logging, dependencies, or threat modeling, read that ``SKILL.md`` and follow it, loading only the ``references/*.md`` it routes to.
+$($importLine)The **secure-webapp** skill (OWASP-grounded web-app security guidance) is installed at ``$rel``. When working on web-app code or design involving auth, sessions, tokens (JWT/OAuth/OIDC), user input, DB queries, file uploads, API endpoints, cookies/CORS/CSP/CSRF, security headers, secrets, redirects, SSRF, logging, dependencies, threat modeling, or LLM/AI features (prompt construction, RAG, agent tools, MCP servers), read that ``SKILL.md`` and follow it, loading only the ``references/*.md`` it routes to.
 
 Explicit modes: ``$secure-webapp audit | quick-check | harden | remediate | design-review | report | update | maintain``.
 <!-- secure-webapp:end -->

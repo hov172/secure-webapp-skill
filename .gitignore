@@ -16,3 +16,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Generated curation briefs — scratch input for an agent, never committed.
+_sources/briefs/

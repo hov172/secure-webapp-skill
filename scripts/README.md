@@ -128,6 +128,19 @@ That applies the same bounds locally that CI would, so a supervised local
 session is strictly the better version of the agent path: more context, a real
 conversation, and no secret in the repository.
 
+**Any agent, not just Claude.** `--write-briefs` renders one self-contained
+curation brief per in-scope reference — instructions, the current reference, the
+upstream diff, and the full changed source text — with no API call:
+
+```sh
+python scripts/refresh.py
+python scripts/curate_references.py --write-briefs   # -> _sources/briefs/*.brief.md
+```
+
+Hand a brief to Codex, Gemini CLI, or anything else, apply its edits, then run
+`verify_agent_changes.py`. Briefs are gitignored and `_sources/` never ships, so
+they cannot leak into the package.
+
 ### `verify_agent_changes.py`
 
 Bounds what an agent-driven curation run was allowed to change. The scripted

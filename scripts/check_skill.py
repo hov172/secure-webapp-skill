@@ -84,6 +84,19 @@ def check_mode_consistency(skill_name: str, skill_text: str) -> None:
         if not (ROOT / rel).exists():
             fail(f"SKILL.md routes to a missing asset: {rel}")
 
+    # The installers embed their own copy of the "when to use this skill" trigger
+    # list in the AGENTS.md / GEMINI.md discovery block. That is what makes the
+    # skill fire for Codex and Gemini users, and it silently drifted from
+    # SKILL.md when AI/LLM coverage was added in 1.4.0 — those users kept getting
+    # the old trigger list. Any topic named here must appear in all four places.
+    for topic in ("LLM", "MCP"):
+        for name in ("bin/install.js", "scripts/install.sh", "scripts/install.ps1", "SKILL.md"):
+            if topic not in (ROOT / name).read_text(encoding="utf-8"):
+                fail(
+                    f"{name} discovery/trigger text is missing '{topic}'; the installers' "
+                    "trigger list must stay in sync with SKILL.md"
+                )
+
 
 def check_required_paths(skill_name: str) -> None:
     required = [
