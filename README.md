@@ -36,6 +36,7 @@ It is designed for AI workflows where security needs to be present by default, w
 - [Token Usage](#token-usage)
 - [Maintainer Guide](#maintainer-guide)
   - [Reference Curation](#reference-curation)
+  - [Continuous Integration](#continuous-integration)
   - [Detection Corpus](#detection-corpus)
 - [Changelog](CHANGELOG.md)
 - [OWASP Sources](#owasp-sources)
@@ -861,6 +862,28 @@ agent-assisted editing session:
 ```sh
 python3 scripts/verify_agent_changes.py
 ```
+
+### Continuous Integration
+
+Four workflows, three of which need no credential of any kind.
+
+| Workflow | Trigger | What it does | Needs a credential? |
+|---|---|---|---|
+| `validate.yml` | every push and PR | Compiles the scripts, packages the archive, runs `check_skill.py`, runs the detection-corpus gate, and proves the build is reproducible | No |
+| `refresh-owasp.yml` | Mondays 09:00 UTC, or manual | Fetches upstream OWASP into `_sources/`, optionally curates references, rebuilds the archive, opens a PR, and files a maintenance issue if any tracked file could not be fetched | Only for the optional curation step |
+| `release.yml` | `v*` tags | Rebuilds, regenerates `SHA256SUMS`, validates, and uploads both artifacts to the GitHub release | No |
+| `curate-agent.yml` | manual only | Runs an agent with repository access to curate references for large structural upstream changes, bounded by `verify_agent_changes.py` | Yes |
+
+Invariants `check_skill.py` enforces on these, so they cannot quietly regress:
+
+- Every action is pinned to a full 40-character commit SHA **and** annotated with
+  its release version, so Dependabot tracks releases rather than branch heads.
+- The refresh workflow never auto-merges, and may only commit `references/` if it
+  actually ran the curation step.
+- The agent workflow stays `workflow_dispatch` only, keeps its bounds check, and
+  never auto-merges.
+- `validate.yml` keeps read-only contents permission and disables persisted
+  credentials on checkout.
 
 ### Detection Corpus
 

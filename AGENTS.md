@@ -41,7 +41,7 @@ Users can trigger specific modes with `$secure-webapp <mode>`:
 - `$secure-webapp design-review` — pre-implementation threat model
 - `$secure-webapp report` — write a formal audit report (reads `assets/report-template.md`)
 - `$secure-webapp update` — self-update the local install
-- `$secure-webapp maintain` — refresh and rebuild the skill package
+- `$secure-webapp maintain` — refresh and rebuild the skill package (run from a clone of the source repository, not an installed copy)
 
 ## Tooling note
 

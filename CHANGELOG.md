@@ -3,6 +3,31 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.5
+
+Documentation sweep across every doc in the repository, verified against the
+code rather than written from memory.
+
+### Changed
+
+- **README** gains a Continuous Integration section: all four workflows in one
+  table with their triggers, what they do, and whether each needs a credential
+  (three of four do not), plus the invariants `check_skill.py` enforces on them.
+- **`scripts/README.md`** gains a script index table, and its workflow list now
+  includes the bounds check and the no-credential brief path.
+- **`tests/README.md`** documents how to add a fixture and why fixtures must
+  never use a real provider key format — the mistake that once got the
+  repository blocked by push protection.
+- **`_sources/README.md`** documents everything the pipeline now writes there:
+  `_state.json`, `CHANGES.md`, `CURATION.md`, `briefs/`, and cache pruning.
+- **`SKILL.md`**, **`AGENTS.md`** and **`GEMINI.md`** clarify that
+  `$secure-webapp maintain` runs from a clone of the source repository, not an
+  installed copy — matching the skip behaviour added in 1.4.3.
+
+Verified mechanically: all TOC anchors resolve, every file path referenced in
+backticks exists, all 20 documented command invocations run and every flag they
+use is accepted, and the packaging list matches the built archive exactly.
+
 ## 1.4.4
 
 Closes the Codex/Gemini gaps. End users on those agents were already fully

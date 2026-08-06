@@ -37,7 +37,8 @@ When that applies:
 
 Trigger modes with `$secure-webapp <mode>`: `audit`, `quick-check`, `harden`,
 `remediate`, `design-review`, `report`, `update`, `maintain`. See `AGENTS.md`
-for the full description of each mode.
+for the full description of each mode. (`maintain` runs from a clone of the
+source repository, not an installed copy.)
 
 ## Tooling note
 

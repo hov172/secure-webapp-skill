@@ -2,14 +2,31 @@
 
 This directory contains the tooling for keeping the skill current with upstream OWASP material and packaging it consistently. It also holds the end-user installers and the auto-update helper. The Node `npx` installer itself lives at `bin/install.js`.
 
+## What's here
+
+| Script | Purpose | Needs a credential? |
+|---|---|---|
+| `refresh.py` | Fetch tracked upstream OWASP files into `_sources/`, diff them, write `CHANGES.md` | No |
+| `curate_references.py` | Propose reference edits from the upstream diff, or render briefs for any agent | Only to call a model; `--dry-run`, `--print-prompt` and `--write-briefs` do not |
+| `verify_agent_changes.py` | Bound what an agent-driven run was allowed to change | No |
+| `eval_skill.py` | Detection-corpus gate, plus the graded behavioral eval | No |
+| `check_skill.py` | Validate the package, the workflows, and cross-file consistency | No |
+| `package_skill.py` | Build the reproducible `.skill` archive | No |
+| `release_checksums.py` | Generate `SHA256SUMS` (and an optional signature) | No |
+| `install.sh` / `install.ps1` | End-user installers for environments without Node.js | No |
+| `setup-auto-update.js` | Register an opt-in background updater | No |
+| `manifest.json` | Which upstream files are tracked | — |
+| `reference_map.json` | Which upstream sources ground which reference | — |
+
 ## The workflow
 
 1. `manifest.json` defines which upstream OWASP files are tracked.
 2. `refresh.py` pulls those files into `_sources/` and writes `CHANGES.md`.
-3. `curate_references.py` reads the **diff** of what moved upstream and proposes targeted edits to the references it grounds (`reference_map.json` says which is which).
-4. **A maintainer reviews those edits** in the pull request. Nothing merges automatically.
-5. `eval_skill.py --check` confirms the detection corpus still covers every watchlist item.
-6. `package_skill.py` and `release_checksums.py` rebuild the distributable outputs.
+3. `curate_references.py` reads the **diff** of what moved upstream and proposes targeted edits to the references it grounds (`reference_map.json` says which is which). With no credential, use `--write-briefs` and hand the briefs to whatever agent you use.
+4. `verify_agent_changes.py` bounds the result when an agent did the editing — only `references/` may change.
+5. **A maintainer reviews those edits.** Nothing merges automatically.
+6. `eval_skill.py --check` confirms the detection corpus still covers every watchlist item.
+7. `package_skill.py` and `release_checksums.py` rebuild the distributable outputs.
 
 Step 3 replaced `sync_references.py`, which regenerated a fixed bullet list from
 substring matches against the cache. Across twelve refreshes it touched
@@ -39,7 +56,11 @@ From the skill folder root:
 
 ```sh
 python scripts/refresh.py
-python scripts/curate_references.py          # needs ANTHROPIC_API_KEY; no-ops without it
+python scripts/curate_references.py          # needs a credential; no-ops without one
+# or, with no credential and any agent:
+#   python scripts/curate_references.py --write-briefs
+#   ...hand the briefs to your agent, apply its edits...
+#   python scripts/verify_agent_changes.py
 python scripts/eval_skill.py --check
 python scripts/package_skill.py
 python scripts/release_checksums.py
