@@ -72,6 +72,34 @@ def watchlist_items() -> dict[int, str]:
     return items
 
 
+# Fixtures must look insecure to a reviewer without looking like a real
+# credential to a secret scanner. A realistic provider key format here gets the
+# repository blocked by GitHub push protection — and lands in every fork.
+SCANNER_BAIT = (
+    ("sk_live_", "Stripe live secret key prefix"),
+    ("sk_test_", "Stripe test secret key prefix"),
+    ("ghp_", "GitHub personal access token prefix"),
+    ("github_pat_", "GitHub fine-grained PAT prefix"),
+    ("xoxb-", "Slack bot token prefix"),
+    ("xoxp-", "Slack user token prefix"),
+    ("AKIA", "AWS access key id prefix"),
+    ("ASIA", "AWS temporary access key id prefix"),
+    ("AIza", "Google API key prefix"),
+    ("-----BEGIN RSA PRIVATE KEY-----", "PEM private key block"),
+    ("-----BEGIN OPENSSH PRIVATE KEY-----", "OpenSSH private key block"),
+)
+
+
+def scanner_bait(text: str) -> str | None:
+    for needle, label in SCANNER_BAIT:
+        if needle in text:
+            return (
+                f"contains a {label} ({needle!r}); use an obvious placeholder instead "
+                "so secret scanners do not flag the repository"
+            )
+    return None
+
+
 def parses_cleanly(path: Path) -> str | None:
     """Syntax-check a fixture without emitting bytecode next to it."""
     text = path.read_text(encoding="utf-8")
@@ -116,6 +144,9 @@ def run_check() -> int:
         err = parses_cleanly(path)
         if err:
             problem(f"tests/fixtures/{entry['file']}: {err}")
+        bait = scanner_bait(path.read_text(encoding="utf-8"))
+        if bait:
+            problem(f"tests/fixtures/{entry['file']}: {bait}")
         if not entry.get("must_mention"):
             problem(f"tests/fixtures/{entry['file']}: expectations list no must_mention terms")
         sev = str(entry.get("min_severity", "")).lower()
