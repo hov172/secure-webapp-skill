@@ -749,17 +749,30 @@ outdated — and if so, what is the smallest edit that fixes it? Default is no c
 
 ```sh
 python3 scripts/curate_references.py --dry-run                    # scope only, no API call
+python3 scripts/curate_references.py --print-prompt               # exact prompt, no API call
 ANTHROPIC_API_KEY=sk-... python3 scripts/curate_references.py
 python3 scripts/curate_references.py --reference auth-and-sessions.md
 ```
 
+**What the model sees:** the current reference, the upstream diff with 25 lines
+of context, the full current text of each changed upstream file where size
+allows, and the names of sibling references grounded in the same sources so it
+does not duplicate their material. `--print-prompt` shows exactly what would be
+sent.
+
 **Guardrails**, because this edits security guidance:
 
 - Only references whose mapped sources actually changed are considered.
-- Only files under `references/` are ever written.
+- Only files under `references/` are ever written — the model never touches the
+  filesystem; the script reads, passes text, validates, then writes.
 - A proposal is rejected if it drops the title, falls below 75% of the original
-  length, reintroduces the old generated-section marker, or is a no-op. Rejections
-  are reported, never silently swallowed.
+  length, reintroduces the old generated-section marker, is a no-op, leaves
+  unbalanced code fences, collapses the section structure, links to a reference
+  that does not exist, or introduces a credential-shaped string. Rejections are
+  reported, never silently swallowed.
+- The repository must validate **before** any edit; if it does not, the run
+  refuses and spends no model calls. After editing, the validator runs again and
+  every edit from that run is reverted if it fails.
 - Rationales are written to `_sources/CURATION.md` and become part of the pull
   request body, so a reviewer sees the reasoning beside the diff.
 - Per-run caps on references touched (`CURATION_MAX_REFERENCES`, default 4) and

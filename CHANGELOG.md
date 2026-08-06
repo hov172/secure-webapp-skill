@@ -3,6 +3,36 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.2
+
+Sharpens reference curation, after asking whether it should instead run as an
+agent with repo write access in CI. It should not — the guardrails only hold
+because the model never touches the filesystem — but the question exposed a real
+gap in how little context the model was given.
+
+### Changed
+
+- **Curation now sees enough to judge.** The model previously got the reference
+  plus a 3-line-context diff, which is rarely enough to tell whether guidance
+  actually shifted. It now receives 25 lines of context, the full current text of
+  each changed upstream file where size allows, and the names of sibling
+  references grounded in the same sources so it does not pull their subject
+  matter into the file it is editing. In testing, prompt context went from ~11k
+  to ~27–37k characters.
+
+### Added
+
+- **Structural guardrails on proposals.** Unbalanced code fences, a collapsed
+  section structure, links to a reference that does not exist, and
+  credential-shaped strings are now rejected alongside the existing checks.
+- **Validation at both ends.** The repository must validate before any edit — if
+  it does not, the run refuses and spends zero model calls, since otherwise an
+  unrelated pre-existing failure would revert perfectly good edits. After
+  editing, the validator runs again and every edit from the run is reverted on
+  failure.
+- `--print-prompt` renders the exact prompt for the first in-scope reference
+  without calling the API, so what gets sent is inspectable and testable.
+
 ## 1.4.1
 
 Supply-chain and build-integrity follow-ups found while merging the Dependabot

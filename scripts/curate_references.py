@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
@@ -58,6 +59,17 @@ MAX_DIFF_CHARS = int(os.environ.get("CURATION_MAX_DIFF_CHARS", "60000"))
 MAX_TOKENS = 16000
 TIMEOUT_SECONDS = 300
 
+# Lines of context around each hunk. Three lines — the git default — is not
+# enough to judge whether a guidance change is real; the surrounding paragraph
+# is usually what tells you.
+DIFF_CONTEXT_LINES = int(os.environ.get("CURATION_DIFF_CONTEXT", "25"))
+
+# Upstream files smaller than this are sent in full alongside the diff, so the
+# model can read the changed guidance in its own context rather than inferring
+# it from hunks.
+FULL_SOURCE_MAX_CHARS = int(os.environ.get("CURATION_FULL_SOURCE_MAX_CHARS", "45000"))
+MAX_FULL_SOURCES = int(os.environ.get("CURATION_MAX_FULL_SOURCES", "3"))
+
 # A proposal that shrinks a reference below this fraction of its original length
 # is treated as a truncation/refusal artifact, not an edit.
 MIN_LENGTH_RATIO = 0.75
@@ -68,10 +80,16 @@ security skill loaded by coding agents. Each reference is opinionated prose \
 written for an engineer who is about to write or review code — not a summary of \
 the standard, and not a list of requirement numbers.
 
-You are given one reference file and the unified diff of the upstream OWASP \
-material that grounds it. Decide whether the upstream change means the guidance \
+You are given one reference file, the unified diff of the upstream OWASP \
+material that grounds it, and (where size allows) the full current text of the \
+changed upstream files. Decide whether the upstream change means the guidance \
 in the reference is now wrong, incomplete, or outdated — and if so, make the \
 smallest edit that fixes it.
+
+Some upstream sources ground more than one reference. When you are told which \
+sibling references share a source, stay in your own lane: edit only the file \
+you were given, and do not duplicate material that plainly belongs to a \
+sibling's topic. Assume the sibling is being reviewed separately.
 
 Change the reference ONLY when the upstream diff represents a real shift in \
 security guidance: a changed recommendation, a newly deprecated or newly \
@@ -169,7 +187,12 @@ def changed_sources() -> set[str]:
 
 
 def diff_for(paths: list[str]) -> str:
-    args = ["git", "diff", "--unified=3", "--"] + [f"_sources/{p}" for p in paths]
+    args = [
+        "git",
+        "diff",
+        f"--unified={DIFF_CONTEXT_LINES}",
+        "--",
+    ] + [f"_sources/{p}" for p in paths]
     try:
         out = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=True).stdout
     except (subprocess.CalledProcessError, FileNotFoundError) as exc:
@@ -179,17 +202,71 @@ def diff_for(paths: list[str]) -> str:
     return out
 
 
-def call_model(model: str, api_key: str, reference_name: str, reference_text: str, diff: str) -> dict:
-    prompt = (
+def full_sources_for(paths: list[str]) -> str:
+    """Current full text of the changed upstream files, size permitting.
+
+    A diff shows what moved; the whole file shows what the guidance now says.
+    For judging 'is our reference still correct?' the latter matters more.
+    """
+    blocks: list[str] = []
+    included = 0
+    for rel in paths:
+        if included >= MAX_FULL_SOURCES:
+            blocks.append(f"[{rel}: omitted, per-run full-source cap reached]")
+            continue
+        path = SOURCES / rel
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if len(text) > FULL_SOURCE_MAX_CHARS:
+            blocks.append(f"[{rel}: {len(text)} chars, too large to include in full; see the diff above]")
+            continue
+        included += 1
+        blocks.append(f"--- {rel} (current full text) ---\n{text}")
+    return "\n\n".join(blocks)
+
+
+def siblings_for(reference: str, changed_hits: list[str], reference_map: dict[str, list[str]]) -> list[str]:
+    """Other references grounded in any of the same changed sources."""
+    hits = set(changed_hits)
+    return sorted(
+        name
+        for name, sources in reference_map.items()
+        if name != reference and hits & set(sources)
+    )
+
+
+def build_prompt(
+    reference_name: str,
+    reference_text: str,
+    diff: str,
+    full_sources: str,
+    siblings: list[str],
+) -> str:
+    sibling_note = (
+        "These sibling references are grounded in some of the same changed sources "
+        f"and are reviewed separately: {', '.join(siblings)}. Do not edit them, and "
+        "do not pull their subject matter into this file.\n\n"
+        if siblings
+        else ""
+    )
+    return (
         f"Reference file: `references/{reference_name}`\n\n"
+        f"{sibling_note}"
         "=== CURRENT REFERENCE ===\n"
         f"{reference_text}\n"
         "=== END CURRENT REFERENCE ===\n\n"
         "=== UPSTREAM OWASP DIFF SINCE LAST REFRESH ===\n"
         f"{diff}\n"
         "=== END UPSTREAM DIFF ===\n\n"
+        "=== CHANGED UPSTREAM SOURCES, CURRENT FULL TEXT ===\n"
+        f"{full_sources}\n"
+        "=== END UPSTREAM SOURCES ===\n\n"
         "Call propose_reference_update with your decision."
     )
+
+
+def call_model(model: str, api_key: str, reference_name: str, prompt: str) -> dict:
     payload = json.dumps(
         {
             "model": model,
@@ -226,8 +303,14 @@ def call_model(model: str, api_key: str, reference_name: str, reference_text: st
     return {}
 
 
-def validate_proposal(original: str, proposed: str) -> str | None:
-    """Reject proposals that look like truncation, refusal, or regression."""
+SCANNER_BAIT = ("sk_live_", "ghp_", "github_pat_", "xoxb-", "AKIA", "AIza", "BEGIN RSA PRIVATE KEY")
+
+
+def validate_proposal(original: str, proposed: str, *, known_references: set[str]) -> str | None:
+    """Reject proposals that look like truncation, refusal, or regression.
+
+    These run before anything is written, so a bad proposal never lands on disk.
+    """
     if not proposed.strip():
         return "proposed content is empty"
     original_title = original.lstrip().splitlines()[0]
@@ -242,13 +325,52 @@ def validate_proposal(original: str, proposed: str) -> str | None:
         return "proposed content reintroduces the removed generated-section marker"
     if proposed == original:
         return "proposal is identical to the current file"
+
+    # Unbalanced fences swallow the rest of the document when rendered, and are
+    # the classic signature of a truncated or garbled edit.
+    if proposed.count("\n```") % 2 != 0:
+        return "proposed content has an odd number of fenced code blocks (unbalanced ```)"
+
+    # A collapsed heading structure means the file was rewritten rather than
+    # edited, even when it passes the length floor.
+    before = len([l for l in original.splitlines() if l.startswith("## ")])
+    after = len([l for l in proposed.splitlines() if l.startswith("## ")])
+    if before and after < before - 1:
+        return f"proposed content drops section headings ({before} -> {after}); expected a targeted edit"
+
+    # Cross-references must still resolve, or routing breaks at runtime.
+    for target in set(re.findall(r"`(?:references/)?([a-z0-9-]+\.md)`", proposed)):
+        if target not in known_references:
+            return f"proposed content links to a reference that does not exist: {target}"
+
+    for needle in SCANNER_BAIT:
+        if needle in proposed:
+            return f"proposed content introduces a credential-shaped string ({needle!r})"
     return None
+
+
+def validates(stage: str) -> bool:
+    """Run the package validator over the current tree."""
+    result = subprocess.run(
+        [sys.executable, "scripts/check_skill.py"], cwd=ROOT, capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        detail = (result.stdout.strip() or result.stderr.strip()).splitlines()
+        print(f"\n❌ {stage} validation failed: {detail[-1] if detail else 'unknown error'}")
+        return False
+    print(f"{stage.capitalize()} validation passed.")
+    return True
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Propose reference edits from upstream OWASP diffs.")
     parser.add_argument("--dry-run", action="store_true", help="report what would be curated; call no API")
     parser.add_argument("--reference", metavar="NAME", help="curate only this reference (e.g. auth-and-sessions.md)")
+    parser.add_argument(
+        "--print-prompt",
+        action="store_true",
+        help="print the exact prompt for the first in-scope reference and exit; calls no API",
+    )
     parser.add_argument("--model", default=os.environ.get("CURATION_MODEL", DEFAULT_MODEL))
     args = parser.parse_args()
 
@@ -288,7 +410,30 @@ def main() -> int:
     for name, hits in candidates:
         print(f"  - references/{name}  ({len(hits)} changed source(s))")
 
+    known_references = {p.name for p in REFERENCES.glob("*.md")}
+
+    if args.print_prompt:
+        name, hits = candidates[0]
+        prompt = build_prompt(
+            name,
+            (REFERENCES / name).read_text(encoding="utf-8"),
+            diff_for(hits),
+            full_sources_for(hits),
+            siblings_for(name, hits, reference_map),
+        )
+        print(f"\n--- prompt that would be sent for references/{name} ({len(prompt)} chars) ---\n")
+        print(prompt)
+        return 0
+
     api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not (args.dry_run or not api_key) and not validates("baseline"):
+        # Establish that the repo validates BEFORE editing anything. Without
+        # this, a pre-existing problem elsewhere fails the post-curation gate
+        # and reverts perfectly good edits for reasons that have nothing to do
+        # with them.
+        print("The repository does not validate as-is; fix that before curating.")
+        return 1
+
     if args.dry_run or not api_key:
         reason = "--dry-run" if args.dry_run else "ANTHROPIC_API_KEY is not set"
         print(f"\nStopping before any model call ({reason}).")
@@ -298,12 +443,18 @@ def main() -> int:
     updated: list[tuple[str, str]] = []
     unchanged: list[tuple[str, str]] = []
     rejected: list[tuple[str, str]] = []
+    originals: dict[Path, str] = {}
 
     for name, hits in candidates:
         path = REFERENCES / name
         original = path.read_text(encoding="utf-8")
+        siblings = siblings_for(name, hits, reference_map)
         print(f"\nCurating references/{name} against {len(hits)} changed source(s)...")
-        result = call_model(args.model, api_key, name, original, diff_for(hits))
+        if siblings:
+            print(f"  sharing sources with: {', '.join(siblings)}")
+        prompt = build_prompt(name, original, diff_for(hits), full_sources_for(hits), siblings)
+        print(f"  context: {len(prompt)} chars")
+        result = call_model(args.model, api_key, name, prompt)
         rationale = str(result.get("rationale", "")).strip() or "(no rationale given)"
 
         if not result.get("needs_update"):
@@ -312,7 +463,7 @@ def main() -> int:
             continue
 
         proposed = str(result.get("updated_content") or "")
-        problem = validate_proposal(original, proposed)
+        problem = validate_proposal(original, proposed, known_references=known_references)
         if problem:
             print(f"  REJECTED — {problem}")
             rejected.append((name, problem))
@@ -320,9 +471,20 @@ def main() -> int:
 
         if not proposed.endswith("\n"):
             proposed += "\n"
+        originals[path] = original
         path.write_text(proposed, encoding="utf-8")
         print(f"  updated — {rationale}")
         updated.append((name, rationale))
+
+    # Whole-repo gate. The baseline check above proved the tree validated before
+    # any edit, so a failure here is attributable to this run — revert it all. A
+    # curation run must never leave the repository worse than it found it.
+    if updated and not validates("post-curation"):
+        print("   Reverting every edit from this run.")
+        for path, original in originals.items():
+            path.write_text(original, encoding="utf-8")
+        print(f"   reverted {len(originals)} file(s).")
+        return 1
 
     print("\n=== Curation summary ===")
     print(f"updated: {len(updated)}  unchanged: {len(unchanged)}  rejected: {len(rejected)}")

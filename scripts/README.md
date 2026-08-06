@@ -72,6 +72,7 @@ targeted edit, or for no change.
 
 ```sh
 python scripts/curate_references.py --dry-run             # what's in scope; no API call
+python scripts/curate_references.py --print-prompt        # exact prompt for the first reference; no API call
 ANTHROPIC_API_KEY=sk-... python scripts/curate_references.py
 python scripts/curate_references.py --reference auth-and-sessions.md
 ```
@@ -79,16 +80,35 @@ python scripts/curate_references.py --reference auth-and-sessions.md
 Without `ANTHROPIC_API_KEY` it prints what it would curate and exits 0, so the
 no-key refresh path is unchanged.
 
+**What the model sees.** The current reference, the upstream diff with 25 lines
+of context (three — git's default — is not enough to tell whether guidance
+actually shifted), the full current text of each changed upstream file where
+size allows, and the names of any sibling references grounded in the same
+sources, so it stays in its lane instead of duplicating their material. Use
+`--print-prompt` to inspect exactly what would be sent.
+
 **Guardrails.** It only writes files under `references/`, only those whose
 mapped sources actually changed, and it rejects any proposal that drops the
 title, falls below 75% of the original length, reintroduces the old generated
-section marker, or comes back identical. Rejections are reported, never silently
-swallowed. Rationales land in `_sources/CURATION.md`, which becomes part of the
-pull request body so a reviewer sees the reasoning beside the diff.
+section marker, comes back identical, leaves unbalanced code fences, collapses
+the section structure, links to a reference that does not exist, or introduces a
+credential-shaped string. Rejections are reported, never silently swallowed.
+
+**Validation, both ends.** The repository must validate *before* any edit — if
+it does not, the run refuses and spends no model calls, because otherwise an
+unrelated pre-existing problem would fail the post-run check and revert good
+edits. After editing, `check_skill.py` runs again; if it fails, every edit from
+that run is reverted. A curation run never leaves the tree worse than it found
+it.
+
+Rationales land in `_sources/CURATION.md`, which becomes part of the pull
+request body so a reviewer sees the reasoning beside the diff.
 
 Tunable via environment: `CURATION_MODEL` (default `claude-opus-5`),
 `CURATION_MAX_REFERENCES` (default 4 per run), `CURATION_MAX_DIFF_CHARS`
-(default 60000).
+(default 60000), `CURATION_DIFF_CONTEXT` (default 25),
+`CURATION_FULL_SOURCE_MAX_CHARS` (default 45000), `CURATION_MAX_FULL_SOURCES`
+(default 3).
 
 In CI, set the `ANTHROPIC_API_KEY` repository secret to enable it; leave it unset
 and the weekly refresh keeps working exactly as it does today, just without
