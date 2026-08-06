@@ -44,6 +44,15 @@ is kept, `CHANGES.md` records the failure, and CI opens a maintenance issue.
 `refresh.py` exits non-zero only when a whole source comes back empty, or under
 `--strict`.
 
+**Quiet weeks produce no commit.** `refresh.py` rewrites `_state.json` and
+`CHANGES.md` only when the upstream content or the fetch-error list actually
+changed. Previously it stamped a fresh `last_run` every run, so an unchanged
+week still produced a diff — a pull request every Monday, and a commit that
+pushed `main` past the last release tag for nothing. To keep `check_skill.py`'s
+30-day staleness gate meaningful through a genuinely quiet stretch, the
+timestamp is refreshed on a heartbeat every `REFRESH_HEARTBEAT_DAYS` (default
+20) even when nothing moved.
+
 ## Recommended cadence
 
 - **Quarterly** (default) — run on the first of Jan / Apr / Jul / Oct.

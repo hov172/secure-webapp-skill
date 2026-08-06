@@ -3,6 +3,22 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.6
+
+### Fixed
+
+- **A quiet refresh no longer produces a commit.** `refresh.py` stamped a fresh
+  `last_run` into `_sources/_state.json` on every run, so a week where nothing
+  changed upstream still produced a diff: a pull request every Monday forever,
+  and a commit that pushed `main` one ahead of the last release tag for no
+  reason. It now rewrites `_state.json` and `CHANGES.md` only when the upstream
+  content or the fetch-error list actually changed.
+
+  To keep `check_skill.py`'s 30-day staleness gate meaningful through a
+  genuinely quiet stretch — where silence is otherwise indistinguishable from a
+  broken pipeline — the timestamp is still refreshed on a heartbeat every
+  `REFRESH_HEARTBEAT_DAYS` (default 20, deliberately 10 days inside the gate).
+
 ## 1.4.5
 
 Documentation sweep across every doc in the repository, verified against the

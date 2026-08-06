@@ -58,6 +58,11 @@ MANIFEST_PATH = SCRIPTS_DIR / "manifest.json"
 STATE_PATH = SOURCES_DIR / "_state.json"
 CHANGES_PATH = SOURCES_DIR / "CHANGES.md"
 
+# Refresh the recorded timestamp at least this often even when nothing upstream
+# changed, so check_skill.py's 30-day staleness gate never fires on a healthy
+# pipeline that simply had a quiet month. Must stay below that threshold.
+HEARTBEAT_DAYS = int(os.environ.get("REFRESH_HEARTBEAT_DAYS", "20"))
+
 USER_AGENT = "secure-webapp-skill-refresh/1.0 (+https://github.com/OWASP)"
 TIMEOUT_SECONDS = 30
 RETRY_ATTEMPTS = 3
@@ -139,6 +144,40 @@ def diff_summary(old: str | None, new: str) -> str:
             snippet += f"; +{len(new_headings) - 3} more"
         summary += f" • new headings: {snippet}"
     return summary
+
+
+def content_fingerprint(state: dict) -> dict:
+    """Everything in the state that is not a timestamp.
+
+    Two refreshes with the same fingerprint found the same upstream world, so
+    there is nothing worth committing.
+    """
+    return {
+        "fetch_errors": sorted(state.get("fetch_errors") or []),
+        "sources": {
+            name: {filename: meta.get("sha256") for filename, meta in (info.get("files") or {}).items()}
+            for name, info in (state.get("sources") or {}).items()
+        },
+    }
+
+
+def substantive_change(old_state: dict, new_state: dict) -> bool:
+    return content_fingerprint(old_state) != content_fingerprint(new_state)
+
+
+def heartbeat_due(last_run: str | None) -> bool:
+    """True when the recorded run is old enough that silence is indistinguishable
+    from a broken pipeline. Refreshing the timestamp then keeps check_skill.py's
+    staleness gate meaningful without a commit every week."""
+    if not last_run:
+        return True
+    try:
+        when = datetime.fromisoformat(last_run)
+    except ValueError:
+        return True
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - when).days >= HEARTBEAT_DAYS
 
 
 def annotate_ci(level: str, message: str) -> None:
@@ -261,9 +300,27 @@ def refresh(*, quiet: bool, dry_run: bool, offline: bool, strict: bool) -> int:
         # Persisted so check_skill.py can report unresolved manifest rot without
         # re-hitting the network.
         new_state["fetch_errors"] = network_errors
+
+        # Only rewrite the bookkeeping files when something actually moved.
+        # `last_run` is a timestamp, so writing it unconditionally made every
+        # refresh produce a diff — a pull request every Monday even when nothing
+        # upstream had changed, and a commit that pushed main past the last
+        # release tag for no reason. The heartbeat below keeps the staleness
+        # check in check_skill.py satisfied during genuinely quiet stretches.
+        if substantive_change(state, new_state):
+            reason = "upstream content changed"
+        elif heartbeat_due(state.get("last_run")):
+            reason = f"heartbeat (no upstream change for {HEARTBEAT_DAYS}+ days)"
+        else:
+            log(
+                "\n✅ Refresh complete — nothing changed upstream, bookkeeping left as-is.",
+                quiet=quiet,
+            )
+            return 0
+
         write_changes_md(results, network_errors, prev_run=state.get("last_run"))
         save_state(new_state)
-        log(f"\n📝 Wrote {CHANGES_PATH.relative_to(REPO_ROOT)}", quiet=quiet)
+        log(f"\n📝 Wrote {CHANGES_PATH.relative_to(REPO_ROOT)} ({reason})", quiet=quiet)
         log(f"💾 Updated {STATE_PATH.relative_to(REPO_ROOT)}", quiet=quiet)
 
     if network_errors:
