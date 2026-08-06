@@ -312,8 +312,29 @@ def check_hygiene() -> None:
     if workflows.exists():
         for path in workflows.glob("*.yml"):
             text = path.read_text(encoding="utf-8")
+            rel = path.relative_to(ROOT)
             if re.search(r"uses:\s+[^@\s]+@v\d", text):
-                fail(f"{path.relative_to(ROOT)} should not pin actions by floating version tags")
+                fail(f"{rel} should not pin actions by floating version tags")
+            # Every third-party action must be pinned to a full commit SHA and
+            # annotated with the release it corresponds to. Without the comment
+            # Dependabot cannot tell which release you are on, so it follows the
+            # action's default branch instead — which is how this repo briefly
+            # ended up running an untagged upstream commit in CI.
+            for line in text.splitlines():
+                match = re.search(r"uses:\s+(\S+)", line)
+                if not match:
+                    continue
+                ref = match.group(1)
+                if "@" not in ref:
+                    fail(f"{rel} has an unpinned action: {ref}")
+                pin = ref.split("@", 1)[1]
+                if not re.fullmatch(r"[0-9a-f]{40}", pin):
+                    fail(f"{rel} must pin actions to a full 40-char commit SHA: {ref}")
+                if not re.search(r"#\s*v\d+\.\d+\.\d+", line):
+                    fail(
+                        f"{rel} pin is missing its '# vX.Y.Z' release comment: {ref} "
+                        "(without it Dependabot tracks the default branch, not releases)"
+                    )
     refresh_workflow = ROOT / ".github/workflows/refresh-owasp.yml"
     if refresh_workflow.exists():
         text = refresh_workflow.read_text(encoding="utf-8")

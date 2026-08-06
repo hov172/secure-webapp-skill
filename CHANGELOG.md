@@ -3,6 +3,34 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.1
+
+Supply-chain and build-integrity follow-ups found while merging the Dependabot
+action bumps.
+
+### Fixed
+
+- **CI was pinned to an untagged upstream commit.** `actions/checkout` had been
+  pinned to `4f1f4ae`, a commit on the action's default branch six commits past
+  `v7.0.0` and belonging to no release. That is not a Dependabot fault: bare SHA
+  pins with no version comment give it nothing to match releases against, so it
+  follows the branch head. All five action pins are now tagged releases with a
+  `# vX.Y.Z` comment — `actions/checkout` moves to `v7.0.1` (a release, and
+  newer than the untagged commit it replaces).
+- **Builds are now reproducible.** `package_skill.py` stamped each zip entry
+  with the file's mtime and a umask-dependent mode, so an unchanged tree
+  produced a different archive hash on every build. `SHA256SUMS` churned on
+  no-op refreshes and "did the artifact actually change?" was unanswerable. All
+  entries now use a fixed 1980-01-01 timestamp and explicit modes; the same tree
+  yields a byte-identical archive.
+
+### Added
+
+- `check_skill.py` fails the build if any workflow uses an action that is not
+  pinned to a full 40-character SHA **and** annotated with its release version.
+- `validate.yml` rebuilds the archive after touching sources and fails if the
+  hash changes, so the reproducibility guarantee is enforced rather than assumed.
+
 ## 1.4.0
 
 The weekly OWASP refresh had been failing every Monday since 6 July 2026, and

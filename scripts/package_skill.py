@@ -10,6 +10,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
+# Fixed timestamp for every archive entry. 1980-01-01 is the zip format's epoch —
+# the earliest value it can represent — so builds are reproducible regardless of
+# checkout time or filesystem mtimes.
+ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)
+
+# Scripts keep the executable bit; everything else is plain data.
+EXECUTABLE_SUFFIXES = {".py", ".js", ".sh"}
+
 
 def read_skill_name() -> str:
     text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -66,7 +74,15 @@ def main() -> None:
             if not should_include(path, package_name):
                 continue
             rel = path.relative_to(ROOT)
-            zf.write(path, f"{skill_name}/{rel.as_posix()}")
+            # Write entries deterministically: same tree in, byte-identical
+            # archive out. Default zipfile behaviour stamps each entry with the
+            # file's mtime and the umask-dependent mode, so a no-op rebuild
+            # produced a different SHA256 and churned SHA256SUMS on every
+            # refresh — which also made "did the artifact change?" unanswerable.
+            info = zipfile.ZipInfo(f"{skill_name}/{rel.as_posix()}", date_time=ZIP_EPOCH)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = (0o755 if path.suffix in EXECUTABLE_SUFFIXES else 0o644) << 16
+            zf.writestr(info, path.read_bytes())
     print(f"Built {package_path}")
 
 

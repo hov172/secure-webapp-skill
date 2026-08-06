@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@4f1f4aec02e41874fa0262ea8ff5172d7978ad1e
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - run: python3 -m py_compile scripts/refresh.py scripts/check_skill.py scripts/package_skill.py scripts/release_checksums.py scripts/eval_skill.py scripts/curate_references.py
@@ -23,3 +23,16 @@ jobs:
       - run: python3 scripts/check_skill.py
       # Detection-corpus coverage: every watchlist item must have a fixture.
       - run: python3 scripts/eval_skill.py --check
+      # Reproducible build: the same tree must always produce the same archive,
+      # so a changed SHA256SUMS always means changed content.
+      - name: Verify the build is reproducible
+        run: |
+          first=$(shasum -a 256 secure-webapp.skill | awk '{print $1}')
+          touch SKILL.md references/*.md
+          python3 scripts/package_skill.py > /dev/null
+          second=$(shasum -a 256 secure-webapp.skill | awk '{print $1}')
+          if [ "$first" != "$second" ]; then
+            echo "::error::Build is not reproducible: $first != $second"
+            exit 1
+          fi
+          echo "Reproducible: $first"
