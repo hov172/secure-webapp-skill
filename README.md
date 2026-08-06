@@ -37,6 +37,7 @@ It is designed for AI workflows where security needs to be present by default, w
 - [Maintainer Guide](#maintainer-guide)
   - [Reference Curation](#reference-curation)
   - [Detection Corpus](#detection-corpus)
+- [Changelog](CHANGELOG.md)
 - [OWASP Sources](#owasp-sources)
 - [License and Attribution](#license-and-attribution)
 - [Connect With Me](#-connect-with-me)
@@ -331,6 +332,7 @@ Use this skill when working on web application code or design that touches:
 - CORS, CSP, CSRF, security headers, redirects, frontend storage, and browser security behavior
 - Secrets, `.env` files, debug mode, logging, error handling, production configuration, and dependency management
 - Secure design, threat modeling, supply-chain risk, exceptional conditions, and security audits
+- LLM/AI features: prompt construction, RAG and retrieval scoping, agent tool calls, MCP servers, and model output that gets rendered or executed
 
 The skill is stack-agnostic. It applies to frameworks such as Next.js, Express, Django, Flask, FastAPI, Rails, Spring, Laravel, Go services, and similar web stacks.
 
@@ -702,6 +704,8 @@ Validate the skill package:
 python3 scripts/check_skill.py
 ```
 
+This checks package shape, that the modes in `SKILL.md` match all three installers and the docs, that the installers verify their downloads, that `reference_map.json` and `manifest.json` agree — and that the upstream cache is not stale. "Stale" defaults to 30 days and is tunable with `SKILL_MAX_SOURCE_AGE_DAYS`; it exists so a broken refresh turns normal CI red instead of hiding in a scheduled workflow.
+
 Check the detection corpus still covers every watchlist item:
 
 ```sh
@@ -924,7 +928,7 @@ Repository: <https://github.com/hov172/secure-webapp-skill>
 
 ## License and Attribution
 
-See `LICENSE.txt` for OWASP attribution and license notes.
+The skill itself is MIT licensed — see `LICENSE`. Upstream OWASP attribution and the licenses of the source material are in `LICENSE.txt`. Both files ship inside the `.skill` archive and in every install.
 
 OWASP and OWASP project names are trademarks of the OWASP Foundation. This skill is not an official OWASP project unless explicitly published as one.
 
