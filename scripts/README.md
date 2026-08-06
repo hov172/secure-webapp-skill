@@ -12,9 +12,9 @@ This directory contains the tooling for keeping the skill current with upstream 
 6. `package_skill.py` and `release_checksums.py` rebuild the distributable outputs.
 
 Step 3 replaced `sync_references.py`, which regenerated a fixed bullet list from
-substring matches against the cache. Across eight refreshes that produced
-exactly one reference change — a deleted blank line — while the README claimed
-references were "synced automatically." The difference is the input: pattern
+substring matches against the cache. Across twelve refreshes it touched
+`references/` twice — once to insert itself, once to delete a blank line — while
+the README claimed references were "synced automatically." The difference is the input: pattern
 matches on the cache tell you nothing, the diff tells you what actually changed.
 
 Step 4 is not optional. Model-proposed edits to security guidance are a starting

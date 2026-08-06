@@ -674,8 +674,8 @@ The update order is the same in both cases:
 
 > [!NOTE]
 > Step 2 used to be a `sync_references.py` script that pattern-matched the cache
-> and emitted a fixed bullet list; across eight refreshes it changed a reference
-> exactly once, by deleting a blank line. It was replaced in v1.4.0 by
+> and emitted a fixed bullet list; across twelve refreshes it touched a reference
+> twice — once to insert itself, once to delete a blank line. It was replaced in v1.4.0 by
 > `scripts/curate_references.py`, which works from the upstream **diff** instead
 > — see [Reference Curation](#reference-curation).
 

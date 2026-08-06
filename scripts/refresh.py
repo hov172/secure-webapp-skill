@@ -32,7 +32,7 @@ Exit codes:
        usable files at all (bad base_url, upstream repo moved, network down).
 
 A single missing upstream file must never block the whole refresh: that failure
-mode silently froze this cache for 72 days in mid-2026.
+mode silently froze this cache for five weeks in July 2026.
 
 Recommended cadence: quarterly, or on demand when OWASP announces a major release
 (new Top 10 edition, new ASVS version, etc.).
@@ -268,7 +268,7 @@ def refresh(*, quiet: bool, dry_run: bool, offline: bool, strict: bool) -> int:
 
     if network_errors:
         # Always visible, even under --quiet: a silent partial failure is how
-        # this cache went stale for 72 days without anyone noticing.
+        # this cache went stale for five weeks without anyone noticing.
         print(
             f"⚠️  {len(network_errors)} fetch error(s); cached copies kept. See _sources/CHANGES.md.",
             flush=True,

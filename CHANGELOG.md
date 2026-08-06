@@ -5,7 +5,7 @@ must match `package.json`.
 
 ## 1.4.0
 
-The weekly OWASP refresh had been failing every Monday since 8 June 2026, and
+The weekly OWASP refresh had been failing every Monday since 6 July 2026, and
 the reference sync it fed had never propagated a guidance change. This release
 repairs the pipeline, replaces the sync with something that works from real
 diffs, and adds the first tests of what the skill actually detects.
@@ -15,7 +15,7 @@ diffs, and adds the first tests of what the skill actually detects.
 - **Refresh pipeline repaired.** `JSON_Web_Token_for_Java_Cheat_Sheet.md` was
   renamed upstream to `JSON_Web_Token_Cheat_Sheet.md`; the resulting 404 exited
   `refresh.py` non-zero and killed the workflow at its first step, leaving the
-  cache frozen for 72 days with nothing going red. `refresh.py` now exits 0 on
+  cache frozen for five weeks with nothing going red. `refresh.py` now exits 0 on
   partial fetch failures — the cached copy is kept and the failure is reported —
   and non-zero only when a whole source returns nothing, or under the new
   `--strict`. Fetch errors always print, even under `--quiet`.
@@ -72,10 +72,11 @@ diffs, and adds the first tests of what the skill actually detects.
 ### Removed
 
 - **`scripts/sync_references.py`.** Its generated section was a fixed bullet list
-  behind substring checks that were always true. Across eight refreshes it
-  produced exactly one change to `references/`: a deleted blank line. The
-  generated section is stripped from all references, and the docs no longer
-  claim references sync automatically.
+  behind substring checks that were always true. Across twelve refreshes it
+  touched `references/` exactly twice: once to insert itself, and once to delete
+  a blank line. The other ten produced nothing. The generated section is
+  stripped from all references, and the docs no longer claim references sync
+  automatically.
 
 ## 1.3.1 and earlier
 

@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # The upstream cache is refreshed weekly. Anything older than this means the
 # refresh pipeline is broken and nobody noticed — which is exactly what happened
-# for 72 days in mid-2026, so it is now a build failure rather than a surprise.
+# for five weeks in July 2026, so it is now a build failure, not a surprise.
 MAX_SOURCE_AGE_DAYS = int(os.environ.get("SKILL_MAX_SOURCE_AGE_DAYS", "30"))
 
 
