@@ -10,6 +10,59 @@ Recent supply chain incidents keep showing the same pattern: attackers target de
 
 Use named incidents only as examples, not as static threat intelligence. When maintaining this reference, refresh the examples against current OWASP guidance and public advisories; the durable lesson is that dependency installation and build automation execute privileged code.
 
+## The attack, concretely
+
+Supply-chain findings get under-rated in review because they read like hygiene —
+"pin your actions", "commit a lockfile" — and hygiene sounds optional. It isn't.
+Here is what an unpinned build dependency actually buys an attacker:
+
+```yaml
+jobs:
+  deploy:
+    steps:
+      - uses: some-org/some-action@v4        # mutable tag
+      - run: npm run deploy
+        env:
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+```
+
+`@v4` is a *pointer*, not a version. Whoever controls that repository — or anyone
+who compromises a maintainer account, which is the common case — can move the tag
+to any commit at any time. The next run of this job fetches that code and executes
+it **in the same job, with the same environment**. Your deploy credentials are
+already there in `env`. So are `GITHUB_TOKEN` and anything else the job can read.
+There is no exploit to write and no vulnerability to find: the attacker just moves
+a tag and waits for your next push.
+
+The same shape recurs across the chain. `npm install` instead of `npm ci` resolves
+fresh versions rather than the lockfile, so a compromised transitive dependency
+lands without anyone changing a line of your code — and `postinstall` runs it
+before a single test does. A container base image referenced by mutable tag gets
+you the same outcome at runtime.
+
+**The multiplier is what the job holds.** An unpinned action in a lint job that
+has no secrets is a genuine but contained problem. The same unpinned action in a
+job holding production cloud credentials, a signing key, or publish rights is a
+credential-theft primitive — and the blast radius is everything those credentials
+reach, not just this repository.
+
+## How to rate these in review
+
+Supply-chain findings are frequently scored a notch or two below their real
+impact. Calibrate on what the compromised step can reach:
+
+| Situation | Severity |
+|---|---|
+| Unpinned/floating dependency or action in a job that holds deploy credentials, signing keys, publish rights, or prod access | **High** — direct path to credential theft and downstream compromise |
+| Unpinned/floating dependency or action in a job with no meaningful secrets | **Medium** — real execution of untrusted code, contained blast radius |
+| Missing lockfile, or `npm install` where `npm ci` belongs, in any build that ships | **Medium** |
+| Dependency scanning absent, or its threshold set below `high` so known-vulnerable code ships silently | **Medium** |
+| Long-lived cloud credentials in CI where OIDC is available | **High** — they do not expire, and CI logs and forks leak them |
+| SBOM/provenance missing | **Low** — it does not cause a breach, it slows your response to one |
+
+"It's only CI" is not a mitigating factor. CI is the system that holds the
+credentials and produces the artifact your users install.
+
 ## What "supply chain" includes
 
 Broader than people typically think:
@@ -71,7 +124,7 @@ This is where many of the 2025 attacks landed.
   # STRONG
   - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab  # v4.0.0
   ```
-  A compromised action versioned as `v4` can be silently re-pointed at malicious code. A SHA cannot.
+  A compromised action versioned as `v4` can be silently re-pointed at malicious code, which then runs in your job with your job's secrets in scope. A SHA cannot be re-pointed. Add the version as a comment so Dependabot tracks releases rather than the action's default branch.
 - **Use Dependabot/Renovate to update those SHAs** on a regular cadence — pinning isn't useful if pins never move.
 - **Verify package signatures where available.** PyPI is rolling out attestations; npm has provenance attestations (signed by GitHub Actions); Sigstore signs containers and binaries.
 

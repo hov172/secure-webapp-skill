@@ -3,6 +3,36 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.8
+
+A blind evaluation scored 19/20 with the miss on the CI supply-chain fixture:
+the reviewer found every problem in it — floating action tags, `npm install`
+over `npm ci`, an audit threshold below `high` — and rated the lot **low**. That
+was a gap in this skill's guidance, not in the reviewer.
+
+### Changed
+
+- **`references/supply-chain.md` now says what the attack costs.** It was
+  thorough on *what* to fix and silent on *what happens when you don't* — the
+  only reference shaped that way, and it read as hygiene as a result. It now
+  opens with the concrete chain: a mutable tag is a pointer, whoever compromises
+  the upstream repo re-aims it, and the code then runs in your job with your
+  job's `env` — where the deploy credentials already are. No exploit to write.
+- **Severity calibration table** added, keyed on what the compromised step can
+  reach: High when the job holds deploy credentials, signing keys, or publish
+  rights; Medium when it holds nothing meaningful. Long-lived cloud credentials
+  in CI where OIDC exists are High.
+- **Watchlist item 20 in `SKILL.md`** carries the same framing, since the
+  watchlist stays in context when the reference is not loaded.
+
+### Result
+
+Re-running the blind evaluation against the same corpus with a fresh reviewer
+moved that finding from one **low** to a **high** (mutable tags plus long-lived
+AWS keys, which the earlier run missed entirely) plus a **medium** (`npm
+install`, weak audit threshold). Recall 20/20, precision 6/6, no false positives
+on the six secure files.
+
 ## 1.4.7
 
 Acts on what the first blind evaluation exposed. The 20/20 recall result was

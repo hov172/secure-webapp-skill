@@ -69,7 +69,7 @@ Flag these in passing when seen in web code, with one concrete fix:
 17. Model/LLM output flowing unchecked into an interpreter or sink: `innerHTML`, shell, SQL, file paths, `fetch` URLs, or a downstream agent. Treat it as untrusted input.
 18. Agent tool calls authorized against the service account instead of the end user, or generic `run_shell`/`execute_sql`/`http_request` tools that turn any prompt injection into RCE, SQLi, or SSRF.
 19. User- or document-supplied text concatenated into a system prompt, and secrets or other users' data placed in the model context window.
-20. Floating CI actions/dependencies where pinning/lockfiles are expected. In monorepos and full-stack projects, dependency audits must run in every workspace (`frontend/`, `backend/`, etc.) — a clean audit in one package does not cover others. Flag if the CI audit threshold (`--audit-level`) is weaker than `high`.
+20. Floating CI actions/dependencies where pinning/lockfiles are expected. A mutable tag is a pointer anyone who compromises the upstream repo can re-aim; the code then runs in that job with that job's secrets in scope — rate it High when the job holds deploy credentials, signing keys, or publish rights, not as hygiene. Long-lived cloud credentials in CI where OIDC is available are High for the same reason. In monorepos and full-stack projects, dependency audits must run in every workspace (`frontend/`, `backend/`, etc.) — a clean audit in one package does not cover others. Flag if the CI audit threshold (`--audit-level`) is weaker than `high`.
 
 ## Behavior
 
