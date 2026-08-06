@@ -32,6 +32,27 @@ jobs:
           else
             echo "found=false" >> "$GITHUB_OUTPUT"
           fi
+      # Proposes reference edits from the actual upstream diff. Skips itself and
+      # exits 0 when ANTHROPIC_API_KEY is unset, so the no-key refresh path is
+      # unchanged. Whatever it writes still goes through review below.
+      - name: Curate references from the upstream diff
+        id: curate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CURATION_MODEL: ${{ vars.CURATION_MODEL }}
+        run: python3 scripts/curate_references.py
+      - name: Collect curation report for the PR body
+        id: curation_report
+        run: |
+          if [ -f _sources/CURATION.md ]; then
+            {
+              echo "body<<SWEOF"
+              cat _sources/CURATION.md
+              echo "SWEOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "body=_No reference edits proposed this run._" >> "$GITHUB_OUTPUT"
+          fi
       - name: Build package and checksums
         run: |
           python3 scripts/package_skill.py
@@ -40,8 +61,8 @@ jobs:
         run: |
           rm -rf scripts/__pycache__
           python3 scripts/check_skill.py
-      # references/ is curated by hand. This job only refreshes the upstream
-      # cache and reports what moved; a human decides which guidance changes.
+      # references/ may be edited by the curation step above, never by a blind
+      # sync — and the result always goes to a human. This PR does not auto-merge.
       - name: Create refresh pull request
         id: cpr
         uses: peter-evans/create-pull-request@98357b18bf14b5342f975ff684046ec3b2a07725
@@ -53,18 +74,23 @@ jobs:
             Weekly automated refresh from upstream OWASP GitHub repositories.
 
             This PR includes:
-            - refreshed `_sources/**`
+            - refreshed `_sources/**` (see `_sources/CHANGES.md` for what moved upstream)
+            - any reference edits proposed from those diffs
             - rebuilt `secure-webapp.skill`
             - refreshed `SHA256SUMS`
 
-            **Review required — this PR does not auto-merge.** `references/**` is
-            curated by hand and is deliberately untouched by this job. Read
-            `_sources/CHANGES.md` and decide whether any upstream change warrants
-            a reference edit before merging.
+            ${{ steps.curation_report.outputs.body }}
+
+            **Review required — this PR does not auto-merge.** Reference edits are
+            model-proposed from the upstream diff and are not authoritative. Read
+            them against `_sources/CHANGES.md` before merging, and re-run
+            `python3 scripts/eval_skill.py --grade` if the guidance moved
+            materially.
           branch: refresh/owasp-sources
           delete-branch: true
           add-paths: |
             _sources/**
+            references/**
             secure-webapp.skill
             SHA256SUMS
       - name: Report unfetchable upstream files

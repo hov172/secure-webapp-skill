@@ -106,7 +106,9 @@ def check_required_paths(skill_name: str) -> None:
         "scripts/release_checksums.py",
         "scripts/refresh.py",
         "scripts/eval_skill.py",
+        "scripts/curate_references.py",
         "scripts/manifest.json",
+        "scripts/reference_map.json",
         "tests/expectations.json",
         "tests/README.md",
         "scripts/README.md",
@@ -237,6 +239,42 @@ def check_source_freshness() -> None:
         print("      Update scripts/manifest.json if a file was renamed upstream.")
 
 
+def check_reference_map() -> None:
+    """Every reference must be grounded in real, tracked upstream sources.
+
+    An entry pointing at a file the manifest no longer fetches means curation
+    would silently skip that reference forever.
+    """
+    map_path = ROOT / "scripts/reference_map.json"
+    try:
+        data = json.loads(map_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        fail(f"scripts/reference_map.json is invalid JSON: {exc}")
+    mapping = data.get("references") or {}
+    if not mapping:
+        fail("scripts/reference_map.json declares no references")
+
+    manifest = json.loads((ROOT / "scripts/manifest.json").read_text(encoding="utf-8"))
+    tracked = {
+        f"{source}/{filename}"
+        for source, definition in manifest.get("sources", {}).items()
+        if not source.startswith("_")
+        for filename in definition.get("files", [])
+    }
+
+    on_disk = {p.name for p in (ROOT / "references").glob("*.md")}
+    for name in sorted(on_disk - set(mapping)):
+        fail(f"references/{name} has no entry in scripts/reference_map.json")
+    for name, sources in mapping.items():
+        if not (ROOT / "references" / name).exists():
+            fail(f"reference_map.json maps {name}, which does not exist in references/")
+        if not sources:
+            fail(f"reference_map.json maps {name} to no sources")
+        for source in sources:
+            if source not in tracked:
+                fail(f"reference_map.json maps {name} to untracked source: {source}")
+
+
 def check_hygiene() -> None:
     forbidden_names = {"__pycache__", ".package-build", ".skill-restore"}
     forbidden_suffixes = {".pyc", ".pyo"}
@@ -292,14 +330,21 @@ def check_hygiene() -> None:
         ):
             if expected not in text:
                 fail(f"refresh workflow missing {expected}")
-        # Upstream content must not reach a shipped artifact unreviewed.
+        # Upstream content must not reach a shipped artifact unreviewed. This is
+        # the invariant that matters — not whether references/ is committed.
         if "gh pr merge" in text:
             fail("refresh workflow must not auto-merge; upstream changes need human review")
         add_paths = re.search(r"add-paths:\s*\|\n((?:\s{12}\S.*\n)+)", text)
         if not add_paths:
             fail("refresh workflow has no add-paths block")
-        if "references/" in add_paths.group(1):
-            fail("refresh workflow must not commit references/; those are curated by hand")
+        # references/ may be committed by the refresh only when the curation step
+        # produced it. A workflow that commits references without curating them
+        # is the old blind-sync failure mode returning.
+        if "references/" in add_paths.group(1) and "scripts/curate_references.py" not in text:
+            fail(
+                "refresh workflow commits references/ without running "
+                "scripts/curate_references.py; references must never be written blindly"
+            )
     release_workflow = ROOT / ".github/workflows/release.yml"
     if release_workflow.exists():
         text = release_workflow.read_text(encoding="utf-8")
@@ -359,6 +404,7 @@ def check_package(skill_name: str) -> None:
         f"{prefix}scripts/refresh.py",
         f"{prefix}scripts/setup-auto-update.js",
         f"{prefix}scripts/manifest.json",
+        f"{prefix}scripts/reference_map.json",
         f"{prefix}assets/audit-checklist.md",
         f"{prefix}assets/remediate-checklist.md",
         f"{prefix}assets/report-template.md",
@@ -403,6 +449,7 @@ def main() -> None:
     skill_name = values["name"]
     check_required_paths(skill_name)
     check_manifest()
+    check_reference_map()
     check_source_freshness()
     check_hygiene()
     check_package(skill_name)

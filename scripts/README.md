@@ -6,15 +6,21 @@ This directory contains the tooling for keeping the skill current with upstream 
 
 1. `manifest.json` defines which upstream OWASP files are tracked.
 2. `refresh.py` pulls those files into `_sources/` and writes `CHANGES.md`.
-3. **A maintainer reads `CHANGES.md`** and hand-edits whichever `references/*.md` the upstream changes actually affect.
-4. `eval_skill.py --check` confirms the detection corpus still covers every watchlist item.
-5. `package_skill.py` and `release_checksums.py` rebuild the distributable outputs.
+3. `curate_references.py` reads the **diff** of what moved upstream and proposes targeted edits to the references it grounds (`reference_map.json` says which is which).
+4. **A maintainer reviews those edits** in the pull request. Nothing merges automatically.
+5. `eval_skill.py --check` confirms the detection corpus still covers every watchlist item.
+6. `package_skill.py` and `release_checksums.py` rebuild the distributable outputs.
 
-Step 3 is deliberately human. A `sync_references.py` script used to sit here and
-regenerate a bullet list from substring matches against the cache; across eight
-refreshes it produced exactly one reference change (a deleted blank line) while
-the README claimed references were "synced automatically." It was removed in
-v1.4.0 rather than left to imply a freshness the pipeline never delivered.
+Step 3 replaced `sync_references.py`, which regenerated a fixed bullet list from
+substring matches against the cache. Across eight refreshes that produced
+exactly one reference change — a deleted blank line — while the README claimed
+references were "synced automatically." The difference is the input: pattern
+matches on the cache tell you nothing, the diff tells you what actually changed.
+
+Step 4 is not optional. Model-proposed edits to security guidance are a starting
+point for review, not an authority. `check_skill.py` fails the build if the
+refresh workflow ever auto-merges, or if it commits `references/` without having
+run the curation step.
 
 A renamed or removed upstream file no longer fails the refresh: the cached copy
 is kept, `CHANGES.md` records the failure, and CI opens a maintenance issue.
@@ -33,7 +39,7 @@ From the skill folder root:
 
 ```sh
 python scripts/refresh.py
-# read _sources/CHANGES.md, edit references/ as warranted
+python scripts/curate_references.py          # needs ANTHROPIC_API_KEY; no-ops without it
 python scripts/eval_skill.py --check
 python scripts/package_skill.py
 python scripts/release_checksums.py
@@ -54,6 +60,46 @@ Other modes:
 - `--quiet` — minimal output (good for CI). Fetch errors are still printed.
 - `--offline` — skip network; regenerate `CHANGES.md` from cached `_sources/` only.
 - `--strict` — treat any fetch error as fatal (default is to keep the cached copy and carry on).
+
+## Reference curation
+
+### `curate_references.py`
+
+Runs after `refresh.py`, while the upstream changes are still uncommitted — that
+working-tree diff is the input. For each reference whose mapped sources moved,
+it sends the current reference plus the unified diff to a model and asks for a
+targeted edit, or for no change.
+
+```sh
+python scripts/curate_references.py --dry-run             # what's in scope; no API call
+ANTHROPIC_API_KEY=sk-... python scripts/curate_references.py
+python scripts/curate_references.py --reference auth-and-sessions.md
+```
+
+Without `ANTHROPIC_API_KEY` it prints what it would curate and exits 0, so the
+no-key refresh path is unchanged.
+
+**Guardrails.** It only writes files under `references/`, only those whose
+mapped sources actually changed, and it rejects any proposal that drops the
+title, falls below 75% of the original length, reintroduces the old generated
+section marker, or comes back identical. Rejections are reported, never silently
+swallowed. Rationales land in `_sources/CURATION.md`, which becomes part of the
+pull request body so a reviewer sees the reasoning beside the diff.
+
+Tunable via environment: `CURATION_MODEL` (default `claude-opus-5`),
+`CURATION_MAX_REFERENCES` (default 4 per run), `CURATION_MAX_DIFF_CHARS`
+(default 60000).
+
+In CI, set the `ANTHROPIC_API_KEY` repository secret to enable it; leave it unset
+and the weekly refresh keeps working exactly as it does today, just without
+proposed edits.
+
+### `reference_map.json`
+
+Declares which upstream sources ground which reference — the input that tells
+curation what to re-read. `check_skill.py` validates it both ways: every file in
+`references/` must have an entry, and every source it names must still be
+tracked in `manifest.json`.
 
 ## Customizing what's tracked
 

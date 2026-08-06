@@ -35,6 +35,7 @@ It is designed for AI workflows where security needs to be present by default, w
 - [Reference Files](#reference-files)
 - [Token Usage](#token-usage)
 - [Maintainer Guide](#maintainer-guide)
+  - [Reference Curation](#reference-curation)
   - [Detection Corpus](#detection-corpus)
 - [OWASP Sources](#owasp-sources)
 - [License and Attribution](#license-and-attribution)
@@ -615,7 +616,7 @@ Use $secure-webapp maintain to refresh OWASP sources and rebuild the package.
 Expected behavior:
 
 - Run or update `scripts/refresh.py`
-- Review `_sources/CHANGES.md` and hand-edit any `references/*.md` the upstream changes affect
+- Run `scripts/curate_references.py` to propose reference edits from the upstream diff, and review them
 - Rebuild the package and checksums
 - Run `scripts/check_skill.py` and `scripts/eval_skill.py --check`
 
@@ -663,22 +664,30 @@ There are two ways this skill gets updated:
 The update order is the same in both cases:
 
 1. Fetch the latest OWASP source files into `_sources/`.
-2. Read `_sources/CHANGES.md` and decide, by hand, which curated `references/*.md` need to move.
+2. Propose reference edits from the diff of what actually changed upstream.
 3. Rebuild `secure-webapp.skill`.
 4. Regenerate `SHA256SUMS`.
 5. Validate the result.
+6. **A human reviews the proposed edits before anything merges.**
 
 > [!NOTE]
-> Step 2 is deliberately manual. References are curated and opinionated;
-> mechanical regeneration produced no meaningful updates and gave a false
-> impression of freshness, so it was removed in v1.4.0. `_sources/CHANGES.md`
-> is the triage input — it reports exactly which upstream files moved and
-> whether they gained new sections.
+> Step 2 used to be a `sync_references.py` script that pattern-matched the cache
+> and emitted a fixed bullet list; across eight refreshes it changed a reference
+> exactly once, by deleting a blank line. It was replaced in v1.4.0 by
+> `scripts/curate_references.py`, which works from the upstream **diff** instead
+> — see [Reference Curation](#reference-curation).
 
 Refresh upstream OWASP source material locally:
 
 ```sh
 python3 scripts/refresh.py
+```
+
+Propose reference edits from what changed (needs `ANTHROPIC_API_KEY`; no-ops without it):
+
+```sh
+python3 scripts/curate_references.py --dry-run     # show what's in scope
+python3 scripts/curate_references.py
 ```
 
 Dry-run refresh without downloading:
@@ -717,11 +726,52 @@ Generate checksums and a detached GPG signature when a signing key is available:
 python3 scripts/release_checksums.py --sign
 ```
 
-The update flow does not require an API key. It reads OWASP repositories directly into the local cache; the curated references are then updated by a human reading `_sources/CHANGES.md`.
+The refresh itself does not require an API key — it reads OWASP repositories directly into the local cache. Only the optional curation step needs one; without it, references simply stay as they are and you triage `_sources/CHANGES.md` yourself.
 
 A single upstream file that has been renamed or removed no longer fails the whole refresh — the cached copy is kept, the failure is reported in `_sources/CHANGES.md`, and CI opens a maintenance issue naming the file. Use `--strict` to make any fetch error fatal.
 
 The package script intentionally excludes GitHub-facing docs, `_sources/`, cache files, and local scratch directories from the runtime `.skill` archive.
+
+### Reference Curation
+
+`scripts/curate_references.py` is how upstream OWASP changes actually reach the
+curated references. It runs after `refresh.py`, while the upstream changes are
+still uncommitted — that working-tree diff is its input.
+
+For each reference whose grounding sources changed (per `scripts/reference_map.json`),
+it sends the current reference plus the unified upstream diff to a model and asks
+one question: does this change mean the guidance is now wrong, incomplete, or
+outdated — and if so, what is the smallest edit that fixes it? Default is no change.
+
+```sh
+python3 scripts/curate_references.py --dry-run                    # scope only, no API call
+ANTHROPIC_API_KEY=sk-... python3 scripts/curate_references.py
+python3 scripts/curate_references.py --reference auth-and-sessions.md
+```
+
+**Guardrails**, because this edits security guidance:
+
+- Only references whose mapped sources actually changed are considered.
+- Only files under `references/` are ever written.
+- A proposal is rejected if it drops the title, falls below 75% of the original
+  length, reintroduces the old generated-section marker, or is a no-op. Rejections
+  are reported, never silently swallowed.
+- Rationales are written to `_sources/CURATION.md` and become part of the pull
+  request body, so a reviewer sees the reasoning beside the diff.
+- Per-run caps on references touched (`CURATION_MAX_REFERENCES`, default 4) and
+  diff size (`CURATION_MAX_DIFF_CHARS`, default 60000). Model is
+  `CURATION_MODEL`, default `claude-opus-5`.
+
+> [!IMPORTANT]
+> Model-proposed edits to security guidance are a starting point for review, not
+> an authority. The refresh PR does not auto-merge, and `check_skill.py` fails
+> the build if it ever does — or if the workflow commits `references/` without
+> having run the curation step. Blind writes to the references are the failure
+> mode this replaced; the guard exists so it cannot come back.
+
+**To enable in CI:** set the `ANTHROPIC_API_KEY` repository secret (optionally
+the `CURATION_MODEL` repository variable). Leave it unset and the weekly refresh
+works exactly as it does now, minus the proposed edits.
 
 ### Detection Corpus
 
@@ -761,18 +811,19 @@ The workflow runs weekly on Monday at 09:00 UTC and can also be started manually
 
 1. Runs `python3 scripts/refresh.py`.
 2. Writes upstream OWASP changes under `_sources/`.
-3. Rebuilds `secure-webapp.skill` and `SHA256SUMS`.
-4. Opens a pull request on `refresh/owasp-sources` when changes are detected.
-5. Opens (or comments on) a maintenance issue if any manifest file could not be fetched.
+3. Runs `python3 scripts/curate_references.py` to propose reference edits from those diffs (skipped automatically when no `ANTHROPIC_API_KEY` secret is set).
+4. Rebuilds `secure-webapp.skill` and `SHA256SUMS`.
+5. Opens a pull request on `refresh/owasp-sources`, with the curation rationale in the body.
+6. Opens (or comments on) a maintenance issue if any manifest file could not be fetched.
 
-This is the no-key automation path: OWASP source files are refreshed automatically and the distributable package is rebuilt from the updated tree.
+Without the API key this is a no-key automation path: sources refresh, the package rebuilds, references stay put.
 
 > [!IMPORTANT]
-> **The refresh PR does not auto-merge.** It touches `_sources/` only —
-> `references/**` is curated by hand and is never written by CI. Upstream OWASP
-> content reaching a shipped artifact without human review is a supply-chain
-> path this repository deliberately closes. Review the PR, apply any reference
-> edits the changes warrant, then merge.
+> **The refresh PR does not auto-merge.** Upstream OWASP content — or a model's
+> reading of it — reaching a shipped artifact without human review is a
+> supply-chain path this repository deliberately closes. `check_skill.py` fails
+> the build if auto-merge returns, or if the workflow commits `references/`
+> without having run the curation step.
 
 > [!IMPORTANT]
 > Runtime installs do not self-update inside your agent; they update when you reinstall via `npx` / `bash` / PowerShell, run `$secure-webapp update`, or enable [Automatic Updates](#automatic-updates-optional). Each path is version-checked, so it only reinstalls when a newer version is published.

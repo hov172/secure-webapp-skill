@@ -18,7 +18,7 @@ jobs:
           persist-credentials: false
       - name: Build skill package
         run: |
-          python3 -m py_compile scripts/refresh.py scripts/check_skill.py scripts/package_skill.py scripts/release_checksums.py scripts/eval_skill.py
+          python3 -m py_compile scripts/refresh.py scripts/check_skill.py scripts/package_skill.py scripts/release_checksums.py scripts/eval_skill.py scripts/curate_references.py
           python3 scripts/eval_skill.py --check
           rm -rf scripts/__pycache__ _sources
           python3 scripts/package_skill.py

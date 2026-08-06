@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@0c366fd6a839edf440554fa01a7085ccba70ac98
         with:
           persist-credentials: false
-      - run: python3 -m py_compile scripts/refresh.py scripts/check_skill.py scripts/package_skill.py scripts/release_checksums.py scripts/eval_skill.py
+      - run: python3 -m py_compile scripts/refresh.py scripts/check_skill.py scripts/package_skill.py scripts/release_checksums.py scripts/eval_skill.py scripts/curate_references.py
       - run: rm -rf scripts/__pycache__
       - run: python3 scripts/refresh.py --dry-run --quiet
       - run: python3 scripts/package_skill.py
