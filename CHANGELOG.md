@@ -3,6 +3,43 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.13
+
+### Added
+
+- **Update on session start (Claude Code, opt-in).** `scripts/setup-session-hook.js`
+  registers `scripts/session-start-update-check.sh` as a `SessionStart` hook in
+  `~/.claude/settings.json`. The scheduled updater only fires on its own timer,
+  which misses anyone who works in bursts; this checks when a session opens
+  instead. Flags: `--mode=auto|notify|off`, `--check`, `--disable`.
+
+  Behavior comes from `mode` in `~/.claude/secure-webapp-update.conf`, overridable
+  per-session with `SECURE_WEBAPP_UPDATE_MODE`. `auto` (the default) installs in
+  the background and reports the outcome once at your next session; `notify`
+  reports that a newer release exists and installs nothing; `off` disables the
+  check without unregistering the hook.
+
+  The check is one fetch of the published `VERSION`, throttled to once per 24
+  hours, and every path exits 0 — a network failure or a missing skill never
+  blocks session startup, and a failed fetch does not consume the throttle
+  window. Activity is logged to `~/.claude/secure-webapp-update.log`.
+
+  Registration is a merge, not a rewrite: existing `SessionStart` hooks are kept,
+  re-running replaces this hook's own entry rather than stacking duplicates,
+  `--disable` removes only that entry, and the script refuses to write a
+  `settings.json` it cannot parse — a malformed one silently disables every
+  setting in the file.
+
+  Two failure modes worth recording, both caught in testing rather than in
+  production. Concurrent sessions each ran their own installer, because the lock
+  directory was created before its owner was recorded: a competitor arriving in
+  that window read an empty stamp, treated the freshest possible lock as stale,
+  and reclaimed it. The owning timestamp is now written before forking, and an
+  unreadable stamp counts as just-acquired. Separately, `auto` mode installs from
+  a `mktemp` copy of the hook, because the installer overwrites the hook script
+  while bash is still reading it — bash reads a script incrementally, so
+  executing on from a replaced file is undefined.
+
 ## 1.4.12
 
 ### Fixed

@@ -332,6 +332,37 @@ The job writes its output to a log, so a scheduler that is firing but failing is
 
 `--check` prints that path along with the `PATH` the job will run under. If you enabled auto-update on macOS before **1.4.12**, the job was failing on every run — re-run `node scripts/setup-auto-update.js` to rewrite the plist, since the broken one is not repaired in place.
 
+### Update on Session Start (Claude Code, optional)
+
+A scheduler only fires on its own timer, which can miss you entirely if you work in bursts. The alternative is to check when a Claude Code session starts:
+
+```sh
+# Preview what would be registered (changes nothing)
+node scripts/setup-session-hook.js --check
+
+# Register the SessionStart hook (default mode: auto)
+node scripts/setup-session-hook.js
+node scripts/setup-session-hook.js --mode=notify
+
+# Remove it
+node scripts/setup-session-hook.js --disable
+```
+
+This merges a `SessionStart` entry into `~/.claude/settings.json`, leaving any hooks you already have in place. Re-running replaces its own entry rather than stacking duplicates, and it refuses to write if that file does not parse as JSON.
+
+Behavior is set by `mode` in `~/.claude/secure-webapp-update.conf` (override per-session with `SECURE_WEBAPP_UPDATE_MODE`):
+
+| Mode | Behavior |
+|---|---|
+| `auto` (default) | Installs a newer release in the background and reports the result at your next session |
+| `notify` | Reports that a newer release exists and leaves the install alone |
+| `off` | Disables the check without unregistering the hook |
+
+The check is a single fetch of the published `VERSION` file, throttled to once per 24 hours, and it exits silently on any failure — a network outage or a missing skill never blocks session startup. Activity is logged to `~/.claude/secure-webapp-update.log`.
+
+> [!NOTE]
+> In `auto` mode the installer replaces files under the skill directory while your session is running, so references loaded later in that same session may come from the new version. The upgrade is clean from the next session onward. Use `notify` if you would rather choose that moment yourself.
+
 ## What This Skill Is For
 
 Use this skill when working on web application code or design that touches:
@@ -1008,6 +1039,7 @@ The version is read by the cross-platform installers and updater:
 | `scripts/install.sh` | macOS / Linux | Bash installer for environments without Node.js; verifies the download against `SHA256SUMS` (`--no-verify` to override) |
 | `scripts/install.ps1` | Windows | PowerShell installer for environments without Node.js; verifies the download against `SHA256SUMS` (`-NoVerify` to override) |
 | `scripts/setup-auto-update.js` | macOS / Windows / Linux | Registers an opt-in background updater (launchd / Task Scheduler / cron) |
+| `scripts/setup-session-hook.js` | Claude Code | Registers an opt-in `SessionStart` update check (`auto` / `notify` / `off`) |
 
 ### Packaging
 

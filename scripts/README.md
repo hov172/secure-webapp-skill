@@ -15,6 +15,8 @@ This directory contains the tooling for keeping the skill current with upstream 
 | `release_checksums.py` | Generate `SHA256SUMS` (and an optional signature) | No |
 | `install.sh` / `install.ps1` | End-user installers for environments without Node.js | No |
 | `setup-auto-update.js` | Register an opt-in background updater | No |
+| `setup-session-hook.js` | Register an opt-in `SessionStart` update check for Claude Code | No |
+| `session-start-update-check.sh` | The hook itself — compares versions, then notifies or installs | No |
 | `manifest.json` | Which upstream files are tracked | — |
 | `reference_map.json` | Which upstream sources ground which reference | — |
 
@@ -294,6 +296,35 @@ node scripts/setup-auto-update.js --disable  # remove
 ```
 
 Scheduled jobs run with a minimal `PATH`, so the job explicitly exports one containing both npx's directory and the directory of the node binary that ran the setup — npx is a `#!/usr/bin/env node` script and cannot start without node on `PATH`. It also logs to `~/Library/Logs/com.hov172.secure-webapp-update.log` (macOS) or `~/.cache/secure-webapp-update.log` (Linux); `--check` prints both the resolved `PATH` and the log path. Enabling again rewrites the job in place, which is the supported way to repair one written by a version before 1.4.12.
+
+### `setup-session-hook.js` and `session-start-update-check.sh`
+
+The session-start counterpart. A timer can miss someone who works in bursts; this checks when a Claude Code session opens instead.
+
+```sh
+node scripts/setup-session-hook.js                # register (mode: auto)
+node scripts/setup-session-hook.js --mode=notify  # register, report only
+node scripts/setup-session-hook.js --check        # show the plan, change nothing
+node scripts/setup-session-hook.js --disable      # remove
+```
+
+The setup script merges one entry into `hooks.SessionStart` in `~/.claude/settings.json`, keyed on the hook filename so re-running replaces it instead of stacking duplicates, and `--disable` removes only that entry. It refuses to write a `settings.json` it cannot parse — a malformed one silently disables every setting in the file, so clobbering it would be worse than failing.
+
+`session-start-update-check.sh` resolves the skill root from its own path (so it works under `.claude`, `.codex`, or `.gemini`), then reads `mode` from `~/.claude/secure-webapp-update.conf`, with `SECURE_WEBAPP_UPDATE_MODE` overriding it:
+
+| Mode | Behavior |
+|---|---|
+| `auto` (default) | Install in the background; report the outcome once, next session |
+| `notify` | Report that a newer release exists; never install |
+| `off` | Do nothing |
+
+Three details matter for correctness:
+
+- **It fails open.** Every path exits 0. A network failure, a garbage response, or a missing `VERSION` leaves the session untouched, and a failed fetch does not consume the 24-hour throttle, so the next session retries.
+- **The lock is taken before forking.** The owning timestamp is written by the process that created the lock directory, so a concurrent session can never observe a created-but-unowned lock. An empty timestamp means "acquired microseconds ago" — the freshest lock possible — and is never treated as stale. Without that, three sessions starting together each ran their own installer.
+- **`auto` installs from a detached copy.** The installer overwrites `session-start-update-check.sh` itself, and bash reads a script incrementally, so continuing to execute from a replaced file is undefined. The install runs from a `mktemp` copy that deletes itself.
+
+Activity lands in `~/.claude/secure-webapp-update.log` (`UPDATING`, `UPDATED`, `SKIP`, `STALE_LOCK`, `FAILED`).
 
 ## CI integration (optional)
 

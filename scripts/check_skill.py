@@ -126,6 +126,8 @@ def check_required_paths(skill_name: str) -> None:
         "tests/README.md",
         "scripts/README.md",
         "scripts/setup-auto-update.js",
+        "scripts/setup-session-hook.js",
+        "scripts/session-start-update-check.sh",
         "scripts/install.ps1",
         ".github/workflows/validate.yml",
         ".github/workflows/refresh-owasp.yml",
@@ -193,6 +195,17 @@ def check_required_paths(skill_name: str) -> None:
     for token in ("darwin", "win32", "launchd", "schtasks", "--disable", "--check"):
         if token not in autoupdate:
             fail(f"scripts/setup-auto-update.js missing platform handling: {token}")
+
+    session_hook = (ROOT / "scripts/setup-session-hook.js").read_text(encoding="utf-8")
+    for token in ("SessionStart", "settings.json", "--disable", "--check", "--mode="):
+        if token not in session_hook:
+            fail(f"scripts/setup-session-hook.js missing hook handling: {token}")
+
+    # The hook must stay fail-open: every mode, and a bounded network call.
+    hook_script = (ROOT / "scripts/session-start-update-check.sh").read_text(encoding="utf-8")
+    for token in ("auto", "notify", "off", "--max-time", "hookEventName", "exit 0"):
+        if token not in hook_script:
+            fail(f"scripts/session-start-update-check.sh missing update handling: {token}")
 
 
 def check_manifest() -> None:
@@ -451,6 +464,8 @@ def check_package(skill_name: str) -> None:
         f"{prefix}scripts/release_checksums.py",
         f"{prefix}scripts/refresh.py",
         f"{prefix}scripts/setup-auto-update.js",
+        f"{prefix}scripts/setup-session-hook.js",
+        f"{prefix}scripts/session-start-update-check.sh",
         f"{prefix}scripts/manifest.json",
         f"{prefix}scripts/reference_map.json",
         f"{prefix}assets/audit-checklist.md",
