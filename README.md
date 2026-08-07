@@ -322,6 +322,16 @@ node scripts/setup-auto-update.js --disable
 
 On Windows, run the same commands in PowerShell or Command Prompt (Node.js required); the job is created in Task Scheduler as `secure-webapp-update`. This is the only true background option — the agents themselves do not poll; the scheduler runs the installer and the version check decides whether anything changes.
 
+The job writes its output to a log, so a scheduler that is firing but failing is visible rather than silent:
+
+| Platform | Log |
+|---|---|
+| macOS | `~/Library/Logs/com.hov172.secure-webapp-update.log` |
+| Linux | `~/.cache/secure-webapp-update.log` |
+| Windows | Task Scheduler history for `secure-webapp-update` |
+
+`--check` prints that path along with the `PATH` the job will run under. If you enabled auto-update on macOS before **1.4.12**, the job was failing on every run — re-run `node scripts/setup-auto-update.js` to rewrite the plist, since the broken one is not repaired in place.
+
 ## What This Skill Is For
 
 Use this skill when working on web application code or design that touches:

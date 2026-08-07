@@ -293,6 +293,8 @@ node scripts/setup-auto-update.js --check    # show the plan, change nothing
 node scripts/setup-auto-update.js --disable  # remove
 ```
 
+Scheduled jobs run with a minimal `PATH`, so the job explicitly exports one containing both npx's directory and the directory of the node binary that ran the setup — npx is a `#!/usr/bin/env node` script and cannot start without node on `PATH`. It also logs to `~/Library/Logs/com.hov172.secure-webapp-update.log` (macOS) or `~/.cache/secure-webapp-update.log` (Linux); `--check` prints both the resolved `PATH` and the log path. Enabling again rewrites the job in place, which is the supported way to repair one written by a version before 1.4.12.
+
 ## CI integration (optional)
 
 For a hands-off setup, run the refresh weekly in GitHub Actions and open a pull request when upstream OWASP content changes:

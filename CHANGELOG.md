@@ -3,6 +3,37 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.12
+
+### Fixed
+
+- **The macOS auto-updater never ran.** `setup-auto-update.js` wrote npx's
+  absolute path into the launchd plist but set no `PATH`. launchd hands jobs a
+  minimal `PATH` (`/usr/bin:/bin:/usr/sbin:/sbin`), and npx is a
+  `#!/usr/bin/env node` script — so the job died at the shebang with
+  `env: node: No such file or directory` every time it fired. The absolute path
+  found npx; nothing could find node. The plist now sets `EnvironmentVariables`
+  → `PATH` containing both npx's directory and the directory of the node binary
+  that ran the setup (nvm/fnm/volta keep those apart).
+
+  Anyone who enabled auto-update on macOS has been receiving no updates since.
+  Re-run `node scripts/setup-auto-update.js` to rewrite the plist — the old one
+  is not repaired in place.
+
+- **The Linux cron job had the same defect, plus one more.** It wrote a bare
+  `npx` into the crontab, so cron's minimal `PATH` could not even locate npx.
+  It now writes an absolute path with an inline `PATH=`.
+
+- **Scheduled failures were invisible.** Neither the plist nor the crontab entry
+  captured output — cron actively discarded it with `>/dev/null 2>&1`. A job
+  failing on every run still looked healthy in `launchctl list`, which is why
+  this went unnoticed across eight releases. Both platforms now log to a file
+  (`~/Library/Logs/com.hov172.secure-webapp-update.log` on macOS,
+  `~/.cache/secure-webapp-update.log` on Linux), and `--check` prints the log
+  path and the resolved `PATH`.
+
+Windows was unaffected: Task Scheduler runs `cmd /c npx` with the system `PATH`.
+
 ## 1.4.11
 
 ### Removed
