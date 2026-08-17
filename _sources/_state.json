@@ -1,6 +1,6 @@
 {
   "fetch_errors": [],
-  "last_run": "2026-08-06T05:28:16.996360+00:00",
+  "last_run": "2026-08-17T09:15:57.370162+00:00",
   "sources": {
     "asvs_5_0": {
       "base_url": "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/",
@@ -58,7 +58,7 @@
           "sha256": "c8bde4a8ab46ed3523ff3aa5b864909e129c576ac5bcf3284cdc22cd24b8d70b"
         },
         "Authentication_Cheat_Sheet.md": {
-          "sha256": "5efff7cd4250a47449e77d99a8612e98935b31bdd1b9067e8ae3fff4bcfad329"
+          "sha256": "b1d318a57f742d12b57bccda3153873653652c767038c5ca3d9d74350819f303"
         },
         "Authorization_Cheat_Sheet.md": {
           "sha256": "e78a10eb9759a1fc7593ba1fc89a05b017e7e795ac16ad5496bdba86138d891f"
@@ -76,7 +76,7 @@
           "sha256": "f02ae9e09dee0b4196969ecdbd94bf9267d50d7eaf5bb264cb7d702acea83d74"
         },
         "Credential_Stuffing_Prevention_Cheat_Sheet.md": {
-          "sha256": "4d3524a775473d1f7a8d470a604226d2c4c063656863b7a9fba39aa9d7139e88"
+          "sha256": "0b09e71e540a88457c3e29f43d5f5d23f6aabc30820ce7eac8bb1809a7982162"
         },
         "Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md": {
           "sha256": "8dafa056758968bcf6fdd46096a41ceba7969f755872324a6073979cead3dbee"
@@ -124,7 +124,7 @@
           "sha256": "0a0056b89acc452b4e4fece79511387406480e912f4fce8247b1381446fc4bda"
         },
         "JSON_Web_Token_Cheat_Sheet.md": {
-          "sha256": "13811661115436e33c145c9f48d44bfc4a7b20abf223454dbf76b4ca0930904e"
+          "sha256": "b5172f067316198036bed95af9f4e7b89a9f7bfe64be0075442d58f5840b3847"
         },
         "Key_Management_Cheat_Sheet.md": {
           "sha256": "5c0081b8f00476e68618e4eb956b5a1968cc4d225c11943fe9ca8f6b148b6229"
@@ -133,10 +133,10 @@
           "sha256": "581a9bb96bc934fa277fde7610b6e05fdd485d79ff617851de99fc1262f56f74"
         },
         "Logging_Cheat_Sheet.md": {
-          "sha256": "e3965a340b575bd232c7f5c7bf24d96a4e22bace1783a7a3a11a84d409e0b560"
+          "sha256": "7d069fc66af314b59e2b0729fa05ffd1973b12bcc43c857115adaa4acf1194a8"
         },
         "Logging_Vocabulary_Cheat_Sheet.md": {
-          "sha256": "c1886d6c3dd28ffd66de17f135a40458ba423d813b29e7cb4480d7ec117abc89"
+          "sha256": "8c1929cdc2a7afafb8b1150ed72a6777cc8b4dd52b969468fb92479de55f4458"
         },
         "MCP_Security_Cheat_Sheet.md": {
           "sha256": "480aac4cbfd3c6c05f02f6f9c936b5d34902e39700b0eb520a050de283e4da68"
@@ -160,7 +160,7 @@
           "sha256": "b7c2717110cd913ba5008a6b7aa825bdf8e04acd78378c18708c49c3d14fc8bb"
         },
         "OS_Command_Injection_Defense_Cheat_Sheet.md": {
-          "sha256": "39c81f1c1518782027ff8c9b1aef2df05e14aabbf1953f398afd52ad635669ea"
+          "sha256": "050a5c1cbccfe2a72140f9f30916ab0a2e32f2657beda1c38e552b2a3d898068"
         },
         "Password_Storage_Cheat_Sheet.md": {
           "sha256": "59e6ce03452bb2607e690010487389db388af969d43ce6acb535a3e2f128e14e"
@@ -178,7 +178,7 @@
           "sha256": "77924b56a036b072bbc7a2b3bfc4f9f59fa5da92790c6690681574cb9457ec14"
         },
         "Secrets_Management_Cheat_Sheet.md": {
-          "sha256": "098b2e35ca5b9846bb35cb80fa9eef59aa97d76e10a12a5ff25b121f2c5770bd"
+          "sha256": "302a2e4cb2153616a3c41d8a79d7407f24c03207fe60752892b71ec2776bc60c"
         },
         "Secure_Code_Review_Cheat_Sheet.md": {
           "sha256": "a3a2c91851dceaccff8ab684a56cdafa1006c9bb943c8d085622270f7872e34d"
@@ -193,10 +193,10 @@
           "sha256": "d9323c8d09e4259ea597524fb1513422b8c82f96b287b79405f424b599e74da2"
         },
         "Session_Management_Cheat_Sheet.md": {
-          "sha256": "bf6d4c21941abcb844ce884be7f20cf0a884d86c84eb6bd0df3827bcce55e7e2"
+          "sha256": "dd0f44ee671cea7be58ab51e045392e90a4d40509d6b540456dd952a0521e4e4"
         },
         "Software_Supply_Chain_Security_Cheat_Sheet.md": {
-          "sha256": "d75f515a2518562968355b343879fb9184c5f1e9db276e0509b4455c65f4ab10"
+          "sha256": "33716fb50209675933705e8945d606b5e73c17a6e8a3bb1e0090958bc3fa0786"
         },
         "Subdomain_Takeover_Prevention_Cheat_Sheet.md": {
           "sha256": "b5fdd852ae037d9279a31b52b7914f600d1bc5f997026ab813329279481a6e6b"
@@ -267,7 +267,7 @@
       "base_url": "https://raw.githubusercontent.com/OWASP/wstg/master/",
       "files": {
         "README.md": {
-          "sha256": "ef5294ea6ed42f2f692a682e21b35881845ff1316880481d705b6dcb2140235f"
+          "sha256": "ef46d32b9a5637f65439c8170477b70dbb094608fd2fc369e82ecce9685ad71c"
         },
         "Testing_for_APIs.md": {
           "sha256": "632c9b4562d64dd5fa2f8cfd99b149a08a5769b472271f3f1da5ecf86fcb5315"
@@ -276,7 +276,7 @@
           "sha256": "5aa709b09695b4514245b137ae15a45d8deadc5f2d06c3594029e104ab1b7f18"
         },
         "document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/01-Testing_for_Reflected_Cross_Site_Scripting.md": {
-          "sha256": "e6b4f587063428cb5cc1526b16d748d5d366d4e847bd4cf2eb1cc76f75833654"
+          "sha256": "5342ab92c7c48bcf8ecb5b80a8b4ffa1402ddfb8b7055286094914d399dd1a72"
         }
       },
       "label": "OWASP Web Security Testing Guide (selected)",
