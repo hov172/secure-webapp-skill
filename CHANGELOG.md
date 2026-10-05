@@ -3,6 +3,22 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.14
+
+### Fixed
+
+- **Weekly refresh no longer 404s on the selected WSTG files.** Upstream OWASP
+  WSTG restructured its tree: chapter directories dropped the `_Testing`
+  suffix, `07-Input_Validation_Testing` became `07-Injection`, and the single
+  `Testing_for_APIs.md` was split into a `12-API_Testing` section. The manifest,
+  reference map, and source state now point at the renamed files (the API
+  chapter maps to its overview page). Closes the automated reports #21, #22, #23.
+
+### Changed
+
+- Source cache refreshed: picks up the cheat-sheet edits that landed upstream
+  since the last successful run.
+
 ## 1.4.13
 
 ### Added
