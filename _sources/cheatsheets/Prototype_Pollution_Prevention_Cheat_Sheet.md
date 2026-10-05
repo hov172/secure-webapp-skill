@@ -40,7 +40,9 @@ let obj = {__proto__:null};
 
 ### Use object "freeze" and "seal" mechanisms
 
-You can also use the `Object.freeze()` and `Object.seal()` APIs to prevent built-in prototypes from being modified however this can break the application if the libraries they use modify the built-in prototypes.
+Freezing built-in prototypes with [`Object.freeze()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze) prevents adding or removing their properties and makes existing data properties non-writable. Freezing is shallow: objects referenced by those properties remain mutable unless separately frozen. Test compatibility first, because libraries that modify built-in prototypes can break.
+
+[`Object.seal()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/seal) only prevents adding or removing properties and changing their configuration; existing writable property values can still change. Do not rely on sealing to prevent those modifications.
 
 ### Node.js configuration flag
 
@@ -56,3 +58,8 @@ Prototype pollution is still possible using `constructor.prototype` properties b
 ### Credits
 
 Credit to [Gareth Hayes](https://garethheyes.co.uk/) for providing the original protection guidance [in this comment](https://github.com/OWASP/ASVS/issues/1563#issuecomment-1470027723).
+
+## References
+
+- [MDN: JavaScript prototype pollution](https://developer.mozilla.org/en-US/docs/Web/Security/Attacks/Prototype_pollution)
+- [Node.js: Command-line API](https://nodejs.org/download/release/v26.5.1/docs/api/cli.html)

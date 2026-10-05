@@ -33,9 +33,19 @@ The best way to protect sensitive information is to not store it in the first pl
 
 For symmetric encryption **AES** with a key that's at least **128 bits** (ideally **256 bits**) and a secure [mode](#cipher-modes) should be used as the preferred algorithm.
 
-For asymmetric encryption, use elliptical curve cryptography (ECC) with a secure curve such as **Curve25519** as a preferred algorithm. If ECC is not available and  **RSA** must be used, then ensure that the key is at least **2048 bits**.
+For public-key encryption, use a maintained library implementing an established hybrid encryption scheme, such as [Hybrid Public Key Encryption (HPKE)](https://www.rfc-editor.org/rfc/rfc9180.html#section-4), which combines key establishment, key derivation, and authenticated symmetric encryption. **[X25519 on Curve25519](https://www.rfc-editor.org/rfc/rfc7748.html#section-6.1)** is a key-agreement primitive; it does not encrypt stored data by itself. Select an appropriate [HPKE authentication mode](https://www.rfc-editor.org/rfc/rfc9180.html#section-5) if sender authentication is required; the base mode does not authenticate the sender.
 
-Many other symmetric and asymmetric algorithms are available which have their own pros and cons, and they may be better or worse than AES or Curve25519 in specific use cases. When considering these, a number of factors should be taken into account, including:
+If **RSA** must be used, ensure that the key is at least **2048 bits**.
+
+### Post-Quantum Consideration
+
+RSA and ECC-based public-key cryptography (including Curve25519) are not post-quantum secure. A future cryptographically relevant quantum computer could break them, which matters for data that must remain confidential over long periods.
+
+Where post-quantum key establishment is required, use a supported protocol or library integration of a standardized mechanism such as **[ML-KEM (NIST FIPS 203)](https://csrc.nist.gov/pubs/fips/203/final)**, typically in a hybrid construction alongside a classical algorithm during migration. ML-KEM establishes a shared secret for symmetric encryption; it does not replace AES for encrypting stored data. Include the public-key protection of stored encryption keys in the migration plan.
+
+For migration guidance, see the [Post-Quantum Cryptography Cheat Sheet](Post_Quantum_Cryptography_Cheat_Sheet.md).
+
+When selecting cryptographic algorithms for a specific use case, consider:
 
 - Key size.
 - Known attacks and weaknesses of the algorithm.
@@ -45,7 +55,7 @@ Many other symmetric and asymmetric algorithms are available which have their ow
 - Quality of the libraries available.
 - Portability of the algorithm (i.e, how widely supported is it).
 
-In some cases there may be regulatory requirements that limit the algorithms that can be used, such as [FIPS 140-2](https://csrc.nist.gov/csrc/media/publications/fips/140/2/final/documents/fips1402annexa.pdf) or [PCI DSS](https://www.pcisecuritystandards.org/pci_security/glossary#Strong%20Cryptography).
+In some cases there may be regulatory requirements that limit the algorithms that can be used, such as [FIPS 140-3](https://csrc.nist.gov/pubs/fips/140-3/final) or [PCI DSS](https://www.pcisecuritystandards.org/pci_security/glossary#Strong%20Cryptography).
 
 ### Custom Algorithms
 
@@ -63,9 +73,7 @@ If GCM or CCM are not available, then [CTR](https://en.wikipedia.org/wiki/Block_
 
 ### Random Padding
 
-For RSA, it is essential to enable Random Padding. Random Padding is also known as OAEP or Optimal Asymmetric Encryption Padding. This class of defense protects against Known Plain Text Attacks by adding randomness at the beginning of the payload.
-
-The Padding Schema of [PKCS#1](https://wikipedia.org/wiki/RSA_(cryptosystem)#Padding_schemes) is typically used in this case.
+For RSA encryption, use a maintained library's RSAES-OAEP (Optimal Asymmetric Encryption Padding) implementation, as specified in [RFC 8017, Section 7.1](https://www.rfc-editor.org/rfc/rfc8017.html#section-7.1). OAEP uses randomized encoding and mask generation functions; simply prepending random bytes to the message is not a substitute. Do not use RSA without an encryption padding scheme.
 
 ### Secure Random Number Generation
 
@@ -83,9 +91,9 @@ The table below shows the recommended algorithms for each language, as well as i
 |-------------|------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | C           | `random()`, `rand()`                                                                                                               | [getrandom(2)](http://man7.org/linux/man-pages/man2/getrandom.2.html) |
 | Java        | `Math.random()`, `StrictMath.random()`, `java.util.Random`, `java.util.SplittableRandom`, `java.util.concurrent.ThreadLocalRandom` | [java.security.SecureRandom](https://docs.oracle.com/javase/8/docs/api/java/security/SecureRandom.html), [java.util.UUID.randomUUID()](https://docs.oracle.com/javase/8/docs/api/java/util/UUID.html#randomUUID--) |
-| PHP         | `array_rand()`, `lcg_value()`, `mt_rand()`, `rand()`, `uniqid()`                                                                   | [random_bytes()](https://www.php.net/manual/en/function.random-bytes.php), [Random\Engine\Secure](https://www.php.net/manual/en/class.random-engine-secure.php) in PHP 8, [random_int()](https://www.php.net/manual/en/function.random-int.php) in PHP 7, [openssl_random_pseudo_bytes()](https://www.php.net/manual/en/function.openssl-random-pseudo-bytes.php) in PHP 5 |
+| PHP         | `array_rand()`, `lcg_value()`, `mt_rand()`, `rand()`, `uniqid()`                                                                   | [Random\Engine\Secure](https://www.php.net/manual/en/class.random-engine-secure.php) in PHP 8.2, [random_bytes()](https://www.php.net/manual/en/function.random-bytes.php), [random_int()](https://www.php.net/manual/en/function.random-int.php) in PHP 7, [openssl_random_pseudo_bytes()](https://www.php.net/manual/en/function.openssl-random-pseudo-bytes.php) in PHP 5 |
 | .NET/C#     | `Random()`                                                                                                                         | [RandomNumberGenerator](https://learn.microsoft.com/en-us/dotnet/api/system.security.cryptography.randomnumbergenerator?view=net-6.0) |
-| Objective-C | `arc4random()`/`arc4random_uniform()` (Uses RC4 Cipher), subclasses of`GKRandomSource`, rand(), random()                           | [SecRandomCopyBytes](https://developer.apple.com/documentation/security/1399291-secrandomcopybytes?language=objc) |
+| Objective-C | Subclasses of `GKRandomSource`, `rand()`, `random()` | [SecRandomCopyBytes](https://developer.apple.com/documentation/security/1399291-secrandomcopybytes?language=objc), [the `arc4random` family on current Apple platforms](https://github.com/apple-oss-distributions/Libc/blob/71bbe350ab79eef58113991d817ccc6165061a64/gen/FreeBSD/arc4random.3) |
 | Python      | `random()`                                                                                                                         | [secrets()](https://docs.python.org/3/library/secrets.html#module-secrets) |
 | Ruby        | `rand()`, `Random`                                                                                                                 | [SecureRandom](https://ruby-doc.org/stdlib-2.5.1/libdoc/securerandom/rdoc/SecureRandom.html) |
 | Go          | `rand` using `math/rand` package                                                                                                   | [crypto.rand](https://golang.org/pkg/crypto/rand/) package |
@@ -126,9 +134,9 @@ Encryption keys should be changed (or rotated) based on a number of different cr
 - If the previous key is known (or suspected) to have been compromised.
     - This could also be caused by a someone who had access to the key leaving the organization.
 - After a specified period of time has elapsed (known as the cryptoperiod).
-    - There are many factors that could affect what an appropriate cryptoperiod is, including the size of the key, the sensitivity of the data, and the threat model of the system. See section 5.3 of [NIST SP 800-57](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf) for further guidance.
-- After the key has been used to encrypt a specific amount of data.
-    - This would typically be `2^35` bytes (~34GB) for 64-bit keys and `2^68` bytes (~295 exabytes) for 128-bit block size.
+    - There are many factors that could affect what an appropriate cryptoperiod is, including the size of the key, the sensitivity of the data, and the threat model of the system. See section 5.3 of [NIST SP 800-57 Part 1 Rev. 5](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final) for further guidance.
+- Before reaching the usage limits of the selected encryption mode.
+    - Enforce the mode's limits on message size, encryption operations, and initialization vector (IV) uniqueness across all instances sharing the key. Block size alone does not determine a safe data-volume limit. For example, AES-GCM has separate requirements for input lengths and IV construction in [NIST SP 800-38D, Sections 5.2.1.1 and 8](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-38d.pdf). See [Key Management: Cryptoperiods and Rotation](Key_Management_Cheat_Sheet.md#cryptoperiods-and-rotation) for usage-based rotation guidance.
 - If there is a significant change to the security provided by the algorithm (such as a new attack being announced).
 
 Once one of these criteria have been met, a new key should be generated and used for encrypting any new data. There are two main approaches for how existing data that was encrypted with the old key(s) should be handled:
@@ -189,3 +197,9 @@ The KEK should also be at least as strong as the DEK. The [envelope encryption](
 In simpler application architectures (such as shared hosting environments) where the KEK and DEK cannot be stored separately, there is limited value to this approach, as an attacker is likely to be able to obtain both of the keys at the same time. However, it can provide an additional barrier to unskilled attackers.
 
 A key derivation function (KDF) could be used to generate a KEK from user-supplied input (such a passphrase), which would then be used to encrypt a randomly generated DEK. This allows the KEK to be easily changed (when the user changes their passphrase), without needing to re-encrypt the data (as the DEK remains the same).
+
+## References
+
+- [NIST SP 800-57 Part 1 Rev. 5: Recommendation for Key Management](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r5.pdf)
+- [NIST FIPS 203: Module-Lattice-Based Key-Encapsulation Mechanism Standard](https://csrc.nist.gov/pubs/fips/203/final)
+- [NIST: Post-Quantum Cryptography FAQ](https://csrc.nist.gov/Projects/post-quantum-cryptography/faqs)

@@ -6,7 +6,7 @@ Error handling is a part of the overall security of an application. Except in mo
 
 Unhandled errors can assist an attacker in this initial phase, which is very important for the rest of the attack.
 
-The following [link](https://web.archive.org/web/20230929111320/https://cipher.com/blog/a-complete-guide-to-the-phases-of-penetration-testing/) provides a description of the different phases of an attack.
+The OWASP Web Security Testing Guide explains [how error messages can expose application details](https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/08-Testing_for_Error_Handling/01-Testing_For_Improper_Error_Handling/).
 
 ## Context
 
@@ -131,7 +131,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(value = {Exception.class})
-    public ProblemDetail handleGlobalError(RuntimeException exception, WebRequest request) {
+    public ProblemDetail handleGlobalError(Exception exception, WebRequest request) {
         //Log the exception via the content of the parameter named "exception"
         //...
         //Note that we're using an internal server error response
@@ -395,3 +395,8 @@ The source code of all the sandbox projects created to find the right setup to u
 ## Appendix HTTP Errors
 
 A reference for HTTP errors can be found here [RFC 2616](https://www.ietf.org/rfc/rfc2616.txt). Using error messages that do not provide implementation details is important to avoid information leakage. In general, consider using 4xx error codes for requests that are due to an error on the part of the HTTP client (e.g. unauthorized access, request body too large) and use 5xx to indicate errors that are triggered on server side, due to an unforeseen bug. Ensure that applications are monitored for 5xx errors which are a good indication of the application failing for some sets of inputs.
+
+## References
+
+- [OWASP WSTG: Testing for Improper Error Handling](https://wstg.owasp.org/v4.2/4-Web_Application_Security_Testing/08-Testing_for_Error_Handling/01-Testing_For_Improper_Error_Handling/)
+- [RFC 9457: Problem Details for HTTP APIs](https://www.rfc-editor.org/rfc/rfc9457.html)

@@ -124,7 +124,7 @@ For comprehensive MCP security guidance, see the [MCP Security Cheat Sheet](http
 - Trust tool descriptions as benign. They are an injection surface.
 - Allow MCP tools unrestricted filesystem, network, or credential access on the developer's machine.
 
-Reference: CVE-2026-39313 -- mcp-framework before 0.2.22: unbounded memory allocation in HTTP request body handling allowed unauthenticated denial of service. Example of a vulnerability in AI framework code that highlights the need for dependency auditing and runtime limits.
+Reference: [CVE-2026-39313](https://github.com/advisories/GHSA-353c-v8x9-v7c3) -- mcp-framework before 0.2.22: unbounded memory allocation in HTTP request body handling allowed unauthenticated denial of service. Example of a vulnerability in AI framework code that highlights the need for dependency auditing and runtime limits.
 
 ## Section 5: Agent Runtime Sandboxing
 
@@ -223,7 +223,7 @@ AI coding assistants send code context (open files, project structure, terminal 
 
 - Review what context your AI coding assistant sends to the provider. Most tools document this.
 - Configure AI tools to exclude sensitive directories from context. Add `.env`, `.env.*`, `*.pem`, `*.key`, `credentials.json`, `serviceAccountKey.json`, and similar sensitive files to your AI tool's context exclusion list (`.cursorignore`, `.copilotignore`, or equivalent).
-- Audit what your AI coding tool sends by enabling request logging or using a network proxy to inspect outbound API calls.
+- Audit what your AI coding tool sends using controlled request inspection. Exclude or redact credentials, personal data, and sensitive source code before recording captured traffic; follow the [Logging Cheat Sheet data exclusions](Logging_Cheat_Sheet.md#data-to-exclude).
 - Use self-hosted or air-gapped AI coding tools for projects handling classified, regulated, or highly sensitive code.
 - Store all secrets in environment variables, vault services, or encrypted secret stores -- never in files within the project tree where AI tools can read them.
 
@@ -236,6 +236,8 @@ AI coding assistants send code context (open files, project structure, terminal 
 - Assume that `.gitignore` prevents AI tools from reading files. `.gitignore` only affects git -- AI tools read from the filesystem directly.
 
 ## Section 10: Prompt-to-Code Supply Chain Risk
+
+See the [Software Supply Chain Security Cheat Sheet](Software_Supply_Chain_Security_Cheat_Sheet.md) for controls throughout the development lifecycle.
 
 AI coding agents modify not just application code but also build scripts, CI/CD configurations, package scripts, and deployment infrastructure. Changes to these files execute automatically in trusted contexts with elevated privileges.
 
@@ -270,7 +272,7 @@ AI-powered CI/CD agents (review bots, automated code fixers, PR assistants) run 
 - Scope CI agent credentials to the minimum required permissions. Review bots should not have deploy keys or write access to secrets.
 - Filter and sanitize PR content (title, body, comments, diff) before passing it to CI agents as context. PR content is attacker-controlled input.
 - Run CI agents in isolated environments with no access to production secrets or credentials beyond what the specific job requires.
-- Log all CI agent actions with full context for audit. Monitor for unexpected file modifications, network calls, or secret access patterns.
+- Log CI agent action metadata, correlation identifiers, authorization decisions, and outcomes. Exclude secrets and sensitive prompt, tool-argument, and response content; apply the [Logging Cheat Sheet](Logging_Cheat_Sheet.md#data-to-exclude). Monitor for unexpected file modifications, network calls, or secret access patterns.
 - Implement approval gates before CI agents can push commits, modify workflows, or access sensitive resources.
 
 ### Don't
@@ -349,11 +351,6 @@ AI-generated code must have a human owner. Every AI-assisted change should be re
 
 ## References
 
-- [OWASP AI Agent Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/AI_Agent_Security_Cheat_Sheet.html)
-- [OWASP LLM Prompt Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)
-- [OWASP MCP Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/MCP_Security_Cheat_Sheet.html)
-- [OWASP Secure Coding Practices Quick Reference Guide](https://owasp.org/www-project-secure-coding-practices-quick-reference-guide/)
-- [OWASP Software Supply Chain Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Software_Supply_Chain_Security_Cheat_Sheet.html)
-- [OWASP Top 10 for LLM Applications](https://genai.owasp.org/)
-- [OWASP AISVS](https://github.com/OWASP/AISVS)
-- CVE-2026-39313 -- mcp-framework before 0.2.22: unbounded memory allocation in HTTP request body handling allowed unauthenticated denial of service. Example of a vulnerability in AI framework code that highlights the need for dependency auditing and runtime limits.
+- [NIST SP 800-218: Secure Software Development Framework](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-218.pdf)
+- [OpenSSF: Concise Guide for Evaluating Open Source Software](https://best.openssf.org/Concise-Guide-for-Evaluating-Open-Source-Software)
+- [OWASP AI Security Verification Standard](https://github.com/OWASP/AISVS)

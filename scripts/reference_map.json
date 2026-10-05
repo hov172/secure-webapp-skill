@@ -12,7 +12,7 @@
       "cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.md",
       "cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.md",
       "cheatsheets/NoSQL_Security_Cheat_Sheet.md",
-      "wstg_selected/document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/01-Testing_for_Reflected_Cross_Site_Scripting.md"
+      "wstg_selected/document/4-Web_Application_Security_Testing/07-Injection/01-Reflected_Cross_Site_Scripting.md"
     ],
     "auth-and-sessions.md": [
       "top10_2025/A07_2025-Authentication_Failures.md",
@@ -24,7 +24,7 @@
       "cheatsheets/Multifactor_Authentication_Cheat_Sheet.md",
       "cheatsheets/Forgot_Password_Cheat_Sheet.md",
       "cheatsheets/Credential_Stuffing_Prevention_Cheat_Sheet.md",
-      "wstg_selected/document/4-Web_Application_Security_Testing/04-Authentication_Testing/11-Testing_Multi-Factor_Authentication.md"
+      "wstg_selected/document/4-Web_Application_Security_Testing/04-Authentication/11-Multi-Factor_Authentication.md"
     ],
     "authorization.md": [
       "top10_2025/A01_2025-Broken_Access_Control.md",
@@ -45,7 +45,7 @@
       "cheatsheets/GraphQL_Cheat_Sheet.md",
       "cheatsheets/WebSocket_Security_Cheat_Sheet.md",
       "cheatsheets/File_Upload_Cheat_Sheet.md",
-      "wstg_selected/Testing_for_APIs.md"
+      "wstg_selected/document/4-Web_Application_Security_Testing/12-API_Testing/00-API_Testing_Overview.md"
     ],
     "frontend-and-headers.md": [
       "asvs_5_0/0x12-V3-Web-Frontend-Security.md",

@@ -84,6 +84,18 @@ However, be advised that these frameworks have also presented vulnerabilities an
 
 The storage capabilities or repository used by the session management mechanism to temporarily save the session IDs must be secure, protecting the session IDs against local or remote accidental disclosure or unauthorized access.
 
+### Server-Side Session Token Storage
+
+Storing random session tokens verbatim can be acceptable in a tightly controlled session store, but anyone who can read it can reuse unexpired tokens. High entropy protects against guessing; it does not protect exposed tokens. If read-only disclosure of the store is in your threat model, store a one-way verifier instead. [RFC 6819 recommends token hashes](https://www.rfc-editor.org/rfc/rfc6819.html#section-4.3.2) for the corresponding OAuth access-token database threat.
+
+One approach is an [identifier and secret verifier split](https://auth.pilcrowonpaper.com/sessions). The cookie carries both values; the server stores the public lookup identifier and the full SHA-256 hash of the verifier. On every request, look up the session by identifier, hash the supplied verifier, and compare it with the stored hash using a constant-time comparison. Never accept the identifier alone as proof of authentication. Use a consistent verifier representation when creating and validating the session. A fast hash is sufficient for these random verifiers; password hashing algorithms are unnecessary.
+
+Generate the token, or the secret verifier in the split design, using a CSPRNG with at least 128 bits of entropy; prefer 160 bits or more, following [OAuth's guidance for generated credentials](https://www.rfc-editor.org/rfc/rfc6749.html#section-10.10). Generate the verifier independently of the identifier; the public identifier does not count toward the verifier's entropy.
+
+One-way storage protects against read-only disclosure of session records and backups that contain only verifier hashes. It does not protect against stolen cookies, modification of session records, or compromise of the application. Do not persist the raw verifier alongside its hash.
+
+In either design, restrict access to the session store and encrypt backups and replicas at rest. Follow the [session logging protections](#logging-sessions-life-cycle-monitoring-creation-usage-and-destruction-of-session-ids) and [session renewal guidance](#renew-the-session-id-after-any-privilege-level-change).
+
 ### Used vs. Accepted Session ID Exchange Mechanisms
 
 A web application should make use of cookies for session ID exchange management. If a user submits a session ID through a different exchange mechanism, such as a URL parameter, the web application should avoid accepting it as part of a defensive strategy to stop session fixation.
@@ -134,9 +146,9 @@ See also: [HttpOnly](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#S
 
 ### SameSite Attribute
 
-The `SameSite` attribute prevents the browser from sending the cookie on cross-site requests, mitigating cross-origin leakage and providing CSRF defense. Session cookies must explicitly set `SameSite=Strict` (preferred) or `SameSite=Lax`. Never use `SameSite=None` without `Secure`, and do not rely on the browser-default value, which varies across browsers and versions.
+The `SameSite` attribute controls whether browsers send a cookie with cross-site requests. `SameSite=Strict` excludes cross-site requests, while `SameSite=Lax` permits top-level cross-site navigations that use safe HTTP methods. Treat `SameSite` as [defense in depth against CSRF](Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md#samesite-cookie-attribute), not as a replacement for a CSRF token. Session cookies must explicitly set `SameSite=Strict` (preferred) or `SameSite=Lax`. Never use `SameSite=None` without `Secure`, and do not rely on the browser-default value, which varies across browsers and versions.
 
-See also: [SameSite](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies#SameSite_cookies)
+See also: [SameSite](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#samesitesamesite-value)
 
 ### Cookie Name Prefixes
 
@@ -169,7 +181,7 @@ Cookies are vulnerable to DNS spoofing/hijacking/poisoning attacks, where an att
 
 Session management mechanisms based on cookies can make use of two types of cookies, non-persistent (or session) cookies, and persistent cookies. If a cookie presents the [`Max-Age`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#Directives) (that has preference over `Expires`) or [`Expires`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#Directives) attributes, it will be considered a persistent cookie and will be stored on disk by the web browser based until the expiration time.
 
-Typically, session management capabilities to track users after authentication make use of non-persistent cookies. This forces the session to disappear from the client if the current web browser instance is closed. Therefore, it is highly recommended to use non-persistent cookies for session management purposes, so that the session ID does not remain on the web client cache for long periods of time, from where an attacker can obtain it.
+Use non-persistent cookies when authentication does not need to persist across browser sessions, but do not rely on browser closure to end an authenticated session. Browsers with [session restore can retain session cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie) after they close. Enforce [session expiration](#session-expiration) on the server and invalidate the session when the user logs out; deleting a cookie alone does not invalidate a stolen copy of the session ID.
 
 - Ensure that sensitive information is not compromised by ensuring that it is not persistent, encrypting it, and storing it only for the duration of the need
 - Ensure that unauthorized activities cannot take place via cookie manipulation
@@ -234,15 +246,15 @@ WHATWG suggests the use of `sessionStorage` for data that is relevant for one-in
 
 ## Web Workers
 
-Web Workers run JavaScript code in a global context separate from the one of the current window. A communication channel with the main execution window exists, which is called `MessageChannel`.
+Web Workers run JavaScript in a separate global context. The main window and worker communicate through messages using [`postMessage()`](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers#sending_messages_to_and_from_a_dedicated_worker).
 
 ### Use Case
 
-Web Workers are an alternative for browser storage of (session) secrets when storage persistence across page refresh is not a requirement. For Web Workers to provide secure browser storage, any code that requires the secret should exist within the Web Worker and the secret should never be transmitted to the main window context.
+A worker can keep a secret in memory when persistence across page refresh is not required. To isolate the secret from the main window, obtain it within the worker, keep secret-dependent operations there, and never return the secret to the main window.
 
-Storing secrets within the memory of a Web Worker offers the same security guarantees as an HttpOnly cookie: the confidentiality of the secret is protected. Still, an XSS attack can be used to send messages to the Web Worker to perform an operation that requires the secret. The Web Worker will return the result of the operation to the main execution thread.
+This isolation can reduce direct access to an existing secret, but it does not make the application safe against XSS. Malicious page code can still request secret-dependent operations and read their results. The [OAuth browser-apps guidance](https://www.rfc-editor.org/rfc/rfc10017.html#section-8.3) also explains that isolating an existing refresh token does not prevent malicious code from obtaining new tokens through another authorization flow.
 
-The advantage of a Web Worker implementation compared to an HttpOnly cookie is that a Web Worker allows for some isolated JavaScript code to access the secret; an HttpOnly cookie is not accessible to any JavaScript. If the frontend JavaScript code requires access to the secret, the Web Worker implementation is the only browser storage option that preserves the secret confidentiality.
+Use a worker only when browser-side code needs secret-dependent operations. Expose a narrow message interface and enforce authorization on the server. Worker isolation does not replace XSS prevention or server-side session controls; prefer an HttpOnly cookie or a backend that holds tokens when the browser does not need to handle them.
 
 ## Session ID Life Cycle
 
@@ -276,7 +288,7 @@ Web applications should require reauthentication after high-risk events such as:
 - Login attempts from new or suspicious IP addresses or devices
 - Account recovery flows (e.g., password reset or compromised-account detection)
 
-For best practices on implementing reauthentication after these events, see the [Reauthentication After Risk Events](Authentication_Cheat_Sheet.md#reauthentication-after-risk-events) section in the Authentication Cheat Sheet
+For best practices on implementing reauthentication after these events, see the [Reauthentication After Risk Events](Authentication_Cheat_Sheet.md#re-authentication-after-risk-events) section in the Authentication Cheat Sheet
 
 ### Additional Resources
 
@@ -342,13 +354,13 @@ Web applications must provide a visible and easily accessible logout (logoff, ex
 
 ### Web Content Caching and Clear-Site-Data
 
-Even after the session has ended, private or sensitive data exchanged during the session may still be accessible through the web browser's cache. To mitigate this, web applications must use restrictive cache directives for all HTTP and HTTPS traffic. This includes the use of HTTP headers such as [`Cache-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) and [`Pragma`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Pragma), or equivalent `<meta>` tags on all pages—especially those displaying sensitive content.
+Even after the session has ended, private or sensitive data exchanged during the session may still be accessible through the web browser's cache. Set the cache policy in HTTP response headers on sensitive pages. Do not treat HTML `<meta http-equiv>` tags as an equivalent cache-control mechanism: [browsers support only specific processing instructions](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta/http-equiv#value), and unsupported values can be ignored.
 
-Session identifiers must never be cached. To prevent this, it is highly recommended to include the `Cache-Control: no-store` directive in responses containing session IDs. Unlike `no-cache`, which allows caching but requires revalidation, `no-store` ensures that the response (including headers like `Set-Cookie`) is never stored in any cache.
+Use `Cache-Control: no-store` on responses containing session identifiers or sensitive session data. Unlike `no-cache`, which allows storage but requires revalidation before reuse, [`no-store` directs private and shared HTTP caches not to store the request or response](https://www.rfc-editor.org/rfc/rfc9111.html#section-5.2.2.5). It is not a privacy guarantee: malicious or compromised caches might ignore the directive.
 
 In addition to preventing future caching, applications should ensure that previously stored sensitive data is removed when a session ends. This can be achieved by returning the Clear-Site-Data response header (for example, `Clear-Site-Data: "cache", "cookies", "storage"`) during logout or session termination. This instructs the browser to delete cached resources, cookies, and other client-side storage associated with the origin, helping ensure a complete session cleanup.
 
-> **Note:** The directive `Cache-Control: no-cache="Set-Cookie, Set-Cookie2"` is sometimes suggested to prevent session ID caching. However, this syntax is not widely supported and may lead to unintended behavior. Instead, use `Cache-Control: no-store` for stronger protection. `Clear-Site-Data: cache` can be used to clear every stored response for a site in the browser cache, so use this with care. Note that this will not affect shared or intermediate caches.
+> **Note:** The directive `Cache-Control: no-cache="Set-Cookie, Set-Cookie2"` is sometimes suggested to prevent session ID caching. However, this syntax is not widely supported and may lead to unintended behavior. Instead, use `Cache-Control: no-store` for stronger protection. `Clear-Site-Data: "cache"` can be used to clear every stored response for a site in the browser cache, so use this with care. Note that this will not affect shared or intermediate caches.
 > **Reference:** [MDN - Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control) and [MDN - Clear-Site-Data header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Clear-Site-Data)
 
 ## Reauthentication After Risk Events
@@ -376,9 +388,9 @@ Web applications can use JavaScript code in the login page to evaluate and measu
 
 This extra protection mechanism tries to force the renewal of the session ID pre-authentication, avoiding scenarios where a previously used (or manually set) session ID is reused by the next victim using the same computer, for example, in session fixation attacks.
 
-### Force Session Logout On Web Browser Window Close Events
+### Limits of Logout on Browser Close
 
-Web applications can use JavaScript code to capture all the web browser tab or window close (or even back) events and take the appropriate actions to close the current session before closing the web browser, emulating that the user has manually closed the session via the logout button.
+Browser close events cannot reliably enforce logout. For example, [`beforeunload` may not fire when a mobile browser is closed from the app manager](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event). Use [server-side idle and absolute timeouts](#automatic-session-expiration) and an explicit [logout action](#logout-button) to invalidate sessions. Client-side close handlers can supplement these controls but must not replace them.
 
 ### Disable Web Browser Cross-Tab Sessions
 
@@ -414,7 +426,7 @@ Although these properties cannot be used by web applications to trustingly defen
 
 Web applications should increase their logging capabilities by including information regarding the full life cycle of sessions. In particular, it is recommended to record session related events, such as the creation, renewal, and destruction of session IDs, as well as details about its usage within login and logout operations, privilege level changes within the session, timeout expiration, invalid session activities (when detected), and critical business operations during the session.
 
-The log details might include a timestamp, source IP address, web target resource requested (and involved in a session operation), HTTP headers (including the User-Agent and Referer), GET and POST parameters, error codes and messages, username (or user ID), plus the session ID (cookies, URL, GET, POST…).
+Log the timestamp, source IP address, requested resource, event type, result or error code, and user ID when needed for session monitoring. Record only selected header and parameter fields after excluding credentials and sensitive values, following the [Logging Cheat Sheet](Logging_Cheat_Sheet.md#data-to-exclude). Do not log raw session IDs; use the session correlation approach described below.
 
 Sensitive data like the session ID should not be included in the logs in order to protect the session logs against session ID local or remote disclosure or unauthorized access. However, some kind of session-specific information must be logged in order to correlate log entries to specific sessions. It is recommended to log a salted-hash of the session ID instead of the session ID itself in order to allow for session-specific log correlation without exposing the session ID.
 
@@ -439,3 +451,8 @@ Web Application Firewalls offer detection and protection capabilities against se
 On the other hand, more advanced capabilities can be implemented to allow the WAF to keep track of sessions, and the corresponding session IDs, and apply all kind of protections against session fixation (by renewing the session ID on the client-side when privilege changes are detected), enforcing sticky sessions (by verifying the relationship between the session ID and other client properties, like the IP address or User-Agent), or managing session expiration (by forcing both the client and the web application to finalize the session).
 
 The open-source ModSecurity WAF, plus the OWASP [Core Rule Set](https://owasp.org/www-project-modsecurity-core-rule-set/), provide capabilities to detect and apply security cookie attributes, countermeasures against session fixation attacks, and session tracking features to enforce sticky sessions.
+
+## References
+
+- [NIST SP 800-63B-4: Session Management](https://pages.nist.gov/800-63-4/sp800-63b.html)
+- [MDN: Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie)

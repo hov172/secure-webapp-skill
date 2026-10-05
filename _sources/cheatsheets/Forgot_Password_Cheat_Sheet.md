@@ -45,6 +45,21 @@ Once the user has proved their identity by providing the token (sent via an emai
 - Once they have set their new password, the user should then login through the usual mechanism. Don't automatically log the user in, as this introduces additional complexity to the authentication and session handling code, and increases the likelihood of introducing vulnerabilities.
 - Ask the user if they want to invalidate all of their existing sessions, or invalidate the sessions automatically.
 
+### Account Recovery After Suspected Compromise
+
+A password reset alone may not restore control of a compromised account. An attacker may still have an active session or may have changed recovery information or MFA methods.
+
+When recovering a potentially compromised account:
+
+- Do not rely solely on recently added or changed recovery information. Use independent, previously established recovery evidence, such as saved recovery codes, in a combination that meets the account's assurance requirements. See [NIST account recovery guidance](https://pages.nist.gov/800-63-4/sp800-63b/events/#recovery).
+- Do not automatically restore superseded recovery addresses or phone numbers; they may have been replaced because they were lost or compromised.
+- Promptly suspend or invalidate authenticators identified as compromised, following [NIST guidance for compromised authenticators](https://pages.nist.gov/800-63-4/sp800-63b/events/#loss-theft-damage-and-compromise).
+- Review recovery addresses, phone numbers, and MFA methods with the verified account owner, and remove unauthorized changes. [Google's compromised-account guidance](https://support.google.com/accounts/answer/6294825) identifies these settings for review and correction.
+- After successful recovery, invalidate existing sessions and outstanding password reset and recovery links or codes so they cannot restore an attacker's access. See [session invalidation guidance](Session_Management_Cheat_Sheet.md#session-expiration).
+- Notify the user through all applicable registered notification addresses, including established channels that remain safe to use. Include instructions and contact information for reporting unauthorized recovery, as described in [NIST account notification guidance](https://pages.nist.gov/800-63-4/sp800-63b/events/#notification).
+
+See [reauthentication after risk events](Authentication_Cheat_Sheet.md#re-authentication-after-risk-events) and [MFA recovery](Multifactor_Authentication_Cheat_Sheet.md#resetting-mfa) for related controls.
+
 ## Methods
 
 In order to allow a user to request a password reset, you will need to have some way to identify the user, or a means to reach out to them through a side-channel.
@@ -78,7 +93,7 @@ URL tokens are passed in the query string of the URL, and are typically sent to 
    - Don't rely on the [Host](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Host) header while creating the reset URLs to avoid [Host Header Injection](https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/17-Testing_for_Host_Header_Injection) attacks. The URL should either be hard-coded, or validated against a list of trusted domains.
    - Ensure that the URL is using HTTPS.
 3. The user receives the email, and browses to the URL with the attached token.
-   - Ensure that the reset password page adds the [Referrer Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy) tag with the `noreferrer` value in order to avoid [referrer leakage](https://portswigger.net/kb/issues/00500400_cross-domain-referer-leakage).
+   - Ensure that the reset password page adds the [Referrer Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy) tag with the `no-referrer` value in order to avoid [referrer leakage](https://portswigger.net/kb/issues/00500400_cross-domain-referer-leakage).
    - Implement appropriate protection to prevent users from brute-forcing tokens in the URL, such as rate limiting.
 4. If required, perform any additional validation steps such as requiring the user to answer [security questions](#security-questions).
 5. Let the user create a new password and confirm it. Ensure that the same password policy used elsewhere in the application is applied.
@@ -111,3 +126,8 @@ Security questions should not be used as the sole mechanism for resetting passwo
 ## Account Lockout
 
 Accounts should not be locked out in response to a forgotten password attack, as this can be used to deny access to users with known usernames. For more details on account lockouts, see the [Authentication Cheat Sheet](Authentication_Cheat_Sheet.md).
+
+## References
+
+- [NIST SP 800-63B-4: Account Recovery](https://pages.nist.gov/800-63-4/sp800-63b/events/#recovery)
+- [OWASP Application Security Verification Standard (ASVS): V6.4 Authentication Factor Lifecycle and Recovery](https://github.com/OWASP/ASVS/blob/master/5.0/en/0x15-V6-Authentication.md#v64-authentication-factor-lifecycle-and-recovery)

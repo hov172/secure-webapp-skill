@@ -127,6 +127,8 @@ __DO NOT__ use `X-Content-Security-Policy` or `X-WebKit-CSP`. Their implementati
 
 ## CSP Types (granular/allowlist based or strict)
 
+For original research on allowlist weaknesses, see [CSP Is Dead, Long Live CSP!](https://research.google/pubs/csp-is-dead-long-live-csp-on-the-insecurity-of-whitelists-and-the-future-of-content-security-policy/).
+
 The original mechanism for building a CSP involved creating allow-lists which would define the content and sources that were permitted in the context of the HTML page.
 
 However, current leading practice is to create a "Strict" CSP which is much easier to deploy and more secure as it is less likely to be bypassed.
@@ -209,7 +211,7 @@ Most fetch directives have a certain [fallback list specified in w3](https://www
 - `img-src` specifies the URLs that images can be loaded from.
 - `manifest-src` specifies the URLs that application manifests may be loaded from.
 - `media-src` specifies the URLs from which video, audio and text track resources can be loaded from.
-- `prefetch-src` specifies the URLs from which resources can be prefetched from.
+- `prefetch-src` was an experimental directive for prefetch/prerender resource URLs. It was __removed from the CSP Level 3 specification__ and is ignored by modern browsers — do not rely on it for defense. Constrain scripts, styles, and default fetches with the standard fetch directives instead.
 - `object-src` specifies the URLs from which plugins can be loaded from.
 - `script-src` specifies the locations from which a script can be executed from. It is a fallback directive for other script-like directives.
     - `script-src-elem` controls the location from which execution of script requests and blocks can occur.
@@ -224,10 +226,7 @@ Most fetch directives have a certain [fallback list specified in w3](https://www
 Document directives instruct the browser about the properties of the document to which the policies will apply to.
 
 - `base-uri` specifies the possible URLs that the `<base>` element can use.
-- `plugin-types` limits the types of resources that can be loaded into the document (*e.g.* `application/pdf`). 3 rules apply to the affected elements, `<embed>` and `<object>`:
-    - The element needs to explicitly declare its type.
-    - The element's type needs to match the declared type.
-    - The element's resource needs to match the declared type.
+- `plugin-types` has been [removed from the CSP specification](https://bugs.webkit.org/show_bug.cgi?id=220724). Do not rely on it to enforce content types. Use `object-src 'none'` when embedded objects are unnecessary, as in the [strict policy examples](#strict-policy).
 - `sandbox` restricts a page's actions such as submitting forms.
     - Only applies when used with the request header `Content-Security-Policy`.
     - Not specifying a value for the directive activates all of the sandbox restrictions. `Content-Security-Policy: sandbox;`
@@ -247,7 +246,7 @@ Navigation directives instruct the browser about the locations that the document
 
 Reporting directives deliver violations of prevented behaviors to specified locations. These directives serve no purpose on their own and are dependent on other directives.
 
-- `report-to` (CSP Level 3, used together with the [Reporting API](https://developer.mozilla.org/en-US/docs/Web/API/Reporting_API)) is the __primary, current__ reporting directive. It references a group name defined in the `Reporting-Endpoints` (or legacy `Report-To`) response header containing a JSON-formatted endpoint list.
+- `report-to` (CSP Level 3, used together with the [Reporting API](https://developer.mozilla.org/en-US/docs/Web/API/Reporting_API)) is the __primary, current__ reporting directive. It references an endpoint name defined in the [Reporting-Endpoints response header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Reporting-Endpoints#syntax), which uses comma-separated `name="URL"` entries. The legacy `Report-To` header uses JSON instead.
     - [MDN report-to documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/report-to)
 - `report-uri` is __deprecated__ by CSP Level 3 in favor of `report-to`. It takes a URI that reports are sent to.
     - Format: `Content-Security-Policy: report-uri https://example.com/csp-reports`
@@ -368,14 +367,6 @@ document.getElementById("button1").addEventListener('click', doSomething);
 
 ## References
 
-- [Strict CSP](https://web.dev/strict-csp)
-- [CSP Level 3 W3C](https://www.w3.org/TR/CSP3/)
-- [Content-Security-Policy](https://content-security-policy.com/)
-- [MDN CSP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy)
-- [CSP Wikipedia](https://en.wikipedia.org/wiki/Content_Security_Policy)
-- [CSP CheatSheet by Scott Helme](https://scotthelme.co.uk/csp-cheat-sheet/)
-- [Breaking Bad CSP](https://www.slideshare.net/LukasWeichselbaum/breaking-bad-csp)
-- [CSP A Successful Mess Between Hardening And Mitigation](https://speakerdeck.com/lweichselbaum/csp-a-successful-mess-between-hardening-and-mitigation)
-- [Content Security Policy Guide on AppSec Monkey](https://www.appsecmonkey.com/blog/content-security-policy-header/)
-- CSP Generator: [Chrome](https://chrome.google.com/webstore/detail/content-security-policy-c/ahlnecfloencbkpfnpljbojmjkfgnmdc)/[Firefox](https://addons.mozilla.org/en-US/firefox/addon/csp-generator/)
-- [CSP evaluator](https://csp-evaluator.withgoogle.com/)
+- [W3C Content Security Policy Level 3](https://www.w3.org/TR/CSP3/)
+- [MDN Content-Security-Policy header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy)
+- [Strict CSP deployment guidance](https://web.dev/articles/strict-csp)

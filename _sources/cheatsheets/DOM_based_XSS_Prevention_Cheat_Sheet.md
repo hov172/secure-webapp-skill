@@ -2,20 +2,16 @@
 
 ## Introduction
 
-When looking at XSS (Cross-Site Scripting), there are three generally recognized forms of [XSS](https://owasp.org/www-community/attacks/xss/):
+Commonly discussed, overlapping categories of [XSS (Cross-Site Scripting)](https://owasp.org/www-community/attacks/xss/) include:
 
 - [Reflected or Stored](https://owasp.org/www-community/attacks/xss/#stored-and-reflected-xss-attacks)
 - [DOM Based XSS](https://owasp.org/www-community/attacks/DOM_Based_XSS).
 
 The [XSS Prevention Cheatsheet](Cross_Site_Scripting_Prevention_Cheat_Sheet.md) does an excellent job of addressing Reflected and Stored XSS. This cheatsheet addresses DOM (Document Object Model) based XSS and is an extension (and assumes comprehension) of the [XSS Prevention Cheatsheet](Cross_Site_Scripting_Prevention_Cheat_Sheet.md).
 
-In order to understand DOM based XSS, one needs to see the fundamental difference between Reflected and Stored XSS when compared to DOM based XSS. The primary difference is where the attack is injected into the application.
+Stored and reflected describe how an attack payload reaches a victim; server-side and client-side describe where untrusted data is handled unsafely. [Both stored and reflected XSS can occur on the client or server](https://community.owasp.org/Types_of_Cross-Site_Scripting#types-of-cross-site-scripting), including stored and reflected DOM-based XSS.
 
-Reflected and Stored XSS are server side injection issues while DOM based XSS is a client (browser) side injection issue.
-
-All of this code originates on the server, which means it is the application owner's responsibility to make it safe from XSS, regardless of the type of XSS flaw it is. Also, XSS attacks always **execute** in the browser.
-
-The difference between Reflected/Stored XSS is where the attack is added or injected into the application. With Reflected/Stored the attack is injected into the application during server-side processing of requests where untrusted input is dynamically added to HTML. For DOM XSS, the attack is injected into the application during runtime in the client directly.
+For server-side XSS, the server inserts untrusted data into a response without making it safe for its output context. DOM-based XSS arises from unsafe client-side processing. In either case, the injected script executes in the browser; choose controls for the actual data flow and output context.
 
 When a browser is rendering HTML and any other associated content like CSS or JavaScript, it identifies various rendering contexts for the different kinds of input and follows different rules for each context. A rendering context is associated with the parsing of HTML tags and their attributes.
 
@@ -135,46 +131,28 @@ The `setAttribute(name_string,value_string)` method is dangerous because it impl
 
 In the case above, the attribute name is an JavaScript event handler, so the attribute value is implicitly converted to JavaScript code and evaluated. In the case above, JavaScript encoding does not mitigate against DOM based XSS.
 
-Other JavaScript methods which take code as a string types will have a similar problem as outline above (`setTimeout`, `setInterval`, new Function, etc.). This is in stark contrast to JavaScript encoding in the event handler attribute of a HTML tag (HTML parser) where JavaScript encoding mitigates against XSS.
+Other JavaScript methods that interpret strings as code, such as `setTimeout`, `setInterval`, and `Function`, have the same risk. HTML event-handler attributes also contain [JavaScript function bodies](https://html.spec.whatwg.org/multipage/webappapis.html#event-handler-content-attributes). Escaping every character in one payload may produce a syntax error, but JavaScript encoding is not a defense for this context: escaped identifiers remain executable when the surrounding syntax is valid.
 
 ```html
-<!-- Does NOT work  -->
-<a id="bb" href="#" onclick="\u0061\u006c\u0065\u0072\u0074\u0028\u0031\u0029"> Test Me</a>
+<!-- Executes alert(1) when clicked; encoding the identifier does not make it safe. -->
+<a id="bb" href="#" onclick="\u0061\u006c\u0065\u0072\u0074(1)">Test Me</a>
 ```
 
-An alternative to using `Element.setAttribute(...)` to set DOM attributes is to set the attribute directly. Directly setting event handler attributes will allow JavaScript encoding to mitigate against DOM based XSS. Please note, it is always dangerous design to put untrusted data directly into a command execution context.
+Setting the JavaScript `onclick` property is different from setting an HTML attribute. It expects a callback; assigning a primitive string [sets it to null](https://webidl.spec.whatwg.org/#LegacyTreatNonObjectAsNull), whether or not the string is encoded. This is type conversion, not a benefit of JavaScript encoding. Assign a trusted function, and keep untrusted values as data inside that function rather than compiling them as code.
 
-``` html
-<a id="bb" href="#"> Test Me</a>
+```html
+<a id="bb" href="#">Test Me</a>
 ```
 
-``` javascript
-//The following does NOT work because the event handler is being set to a string.
-//"alert(7)" is JavaScript encoded.
+```javascript
+// Neither string becomes a handler.
+document.getElementById("bb").onclick = "alert(7)";
 document.getElementById("bb").onclick = "\u0061\u006c\u0065\u0072\u0074\u0028\u0037\u0029";
 
-//The following does NOT work because the event handler is being set to a string.
-document.getElementById("bb").onmouseover = "testIt";
-
-//The following does NOT work because of the encoded "(" and ")".
-//"alert(77)" is JavaScript encoded.
-document.getElementById("bb").onmouseover = \u0061\u006c\u0065\u0072\u0074\u0028\u0037\u0037\u0029;
-
-//The following example is tricky
-// first testIt will be assigned as an onmousehover event handler, The second testIt will fire while parsing.
-// because second testIt is a separate js statement
-// this happen because of ; separator
-//"testIt;testIt" is JavaScript encoded.
-document.getElementById("bb").onmouseover = \u0074\u0065\u0073\u0074\u0049\u0074\u003b\u0074\u0065\u0073
-                                            \u0074\u0049\u0074;
-
-//The following DOES WORK because the encoded value is a valid variable name or function reference.
-//"testIt" is JavaScript encoded
-document.getElementById("bb").onmouseover = \u0074\u0065\u0073\u0074\u0049\u0074;
-
-function testIt() {
-   alert("I was called.");
-}
+// A trusted function is a handler.
+document.getElementById("bb").onclick = function () {
+    alert("I was called.");
+};
 ```
 
 There are other places in JavaScript where JavaScript encoding is accepted as valid executable code.
@@ -453,24 +431,16 @@ if (untrustedData === 'location') {
 }
 ```
 
-### GUIDELINE \#9 - Run your JavaScript in a ECMAScript 5 canopy or sandbox
+### GUIDELINE \#9 - Keep HTML sanitization separate from JavaScript execution
 
-Run your JavaScript in a ECMAScript 5 [canopy](https://github.com/jcoglan/canopy) or sandbox to make it harder for your JavaScript API to be compromised (Gareth Heyes and John Stevens).
-
-Examples of some JavaScript sandbox / sanitizers:
-
-- [js-xss](https://github.com/leizongmin/js-xss)
-- [sanitize-html](https://github.com/apostrophecms/sanitize-html)
-- [DOMPurify](https://github.com/cure53/DOMPurify)
-- [MDN - HTML Sanitizer API](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API)
-- [OWASP Summit 2011 - DOM Sandboxing](https://owasp.org/www-pdf-archive/OWASPSummit2011DOMSandboxingBrowserSecurityTrack.pdf)
+Use an HTML sanitizer such as [DOMPurify](https://github.com/cure53/DOMPurify#what-does-it-do) when the application must render untrusted markup; see the [HTML sanitization guidance](Cross_Site_Scripting_Prevention_Cheat_Sheet.md#html-sanitization). HTML sanitizers filter markup and do not provide a sandbox for executing arbitrary JavaScript. Do not pass untrusted code to [`eval()` or `Function()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval#never_use_direct_eval!).
 
 ### GUIDELINE \#10 - Don't eval() JSON to convert it to native JavaScript objects
 
 Don't `eval()` JSON to convert it to native JavaScript objects. Use the built-in `JSON.parse()` to deserialize JSON into JavaScript values, and `JSON.stringify()` to serialize JavaScript values into JSON. `JSON.parse()` rejects anything that is not valid JSON, so it cannot execute attacker-supplied code the way `eval()` can.
 
 > [!WARNING]
-> `JSON.stringify()` is **not** an output-encoding function. Its output is valid JSON but is not safe to embed directly in an HTML, HTML-attribute, or inline `<script>` context — characters like `<`, `>`, `&`, `"`, `'`, ` `, and ` ` can break out of the surrounding context and enable XSS. When embedding the output of `JSON.stringify()` in a page, either (a) deliver it as a separate JSON response and parse it client-side with `JSON.parse()`, or (b) HTML-encode (or JavaScript-string-encode, depending on the sink) the serialized string before injecting it. See [OWASP XSS Prevention Rules #3 and #3.1](Cross_Site_Scripting_Prevention_Cheat_Sheet.md).
+> `JSON.stringify()` is **not** an output-encoding function. Its output is valid JSON, but embedding it in HTML requires protection for the destination context. Prefer a separate response with `Content-Type: application/json`, parsed client-side with `JSON.parse()`. If JSON must be embedded in an inline script, use a serializer or encoder documented for that exact placement, protecting both JavaScript syntax and the [enclosing HTML script context](https://html.spec.whatwg.org/multipage/scripting.html#restrictions-for-contents-of-script-elements), including literal `</script` sequences. HTML entity encoding or JavaScript quote escaping alone is not sufficient for this placement. For other placements, follow the [context-specific XSS encoding rules](Cross_Site_Scripting_Prevention_Cheat_Sheet.md#output-encoding).
 
 ## Common Problems Associated with Mitigating DOM Based XSS
 
@@ -588,3 +558,8 @@ document.write(x);
 ```
 
 Semgrep rule to identify above dom xss [link](https://semgrep.dev/s/we30).
+
+## References
+
+- [MDN: innerHTML Security Considerations](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML#security_considerations)
+- [DOMPurify: HTML Sanitization](https://github.com/cure53/DOMPurify#what-does-it-do)

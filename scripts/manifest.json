@@ -119,9 +119,9 @@
       "_note": "Selected WSTG files are used for audit/checklist maintenance, not runtime penetration-testing behavior.",
       "files": [
         "README.md",
-        "Testing_for_APIs.md",
-        "document/4-Web_Application_Security_Testing/04-Authentication_Testing/11-Testing_Multi-Factor_Authentication.md",
-        "document/4-Web_Application_Security_Testing/07-Input_Validation_Testing/01-Testing_for_Reflected_Cross_Site_Scripting.md"
+        "document/4-Web_Application_Security_Testing/12-API_Testing/00-API_Testing_Overview.md",
+        "document/4-Web_Application_Security_Testing/04-Authentication/11-Multi-Factor_Authentication.md",
+        "document/4-Web_Application_Security_Testing/07-Injection/01-Reflected_Cross_Site_Scripting.md"
       ]
     }
   }

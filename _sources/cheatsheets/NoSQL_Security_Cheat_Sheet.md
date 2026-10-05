@@ -2,7 +2,7 @@
 
 ## Introduction
 
-NoSQL databases (MongoDB, CouchDB, Cassandra etc.) power many modern applications with flexible schemas and horizontal scale. But their different query models and deployment patterns create **more security risks** compared with relational databases.
+NoSQL databases (MongoDB, CouchDB, Cassandra etc.) power many modern applications with flexible schemas and horizontal scale.
 This cheat sheet summarizes guidance to reduce risk when using NoSQL systems.
 
 ## Threats & Common Failure Modes
@@ -43,18 +43,23 @@ db.collection('users').find(filter)
 
 **Safe (use driver query objects / parameterization):**
 
+Building a query object does not prevent operator injection when an untrusted value is itself an object. For example, MongoDB interprets `{ name: { $ne: "" } }` as a [not-equal query](https://www.mongodb.com/docs/manual/reference/operator/query/ne/). Validate the expected scalar type before constructing the filter; do not pass client-supplied objects through as field values.
+
 ```js
-// SAFE: let driver handle query structure
-const filter = { name: req.query.name };
+const name = req.query.name;
+if (typeof name !== 'string') throw new Error("Invalid name");
+const filter = { name };
 db.collection('users').find(filter)
 ```
 
-**Safe (whitelisting for operators):**
+**Additional pattern rejection:**
 
 ```js
-// Reject operator injection by disallowing $ in keys or operator values
+// Reject a pattern in the serialized request body.
 if (JSON.stringify(req.body).includes('"$')) throw Error("Invalid input");
 ```
+
+This [`JSON.stringify()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#description) check is a denylist, not an operator allowlist. It also rejects ordinary string values that begin with `$`, and it does not validate allowed fields or their types. Use [field-specific validation](Input_Validation_Cheat_Sheet.md#input-validation-strategies) before building queries.
 
 Notes:
 
@@ -74,6 +79,8 @@ Notes:
 from pymongo import MongoClient
 client = MongoClient(uri, tls=True)
 collection = client.mydb.users
+if not isinstance(email_input, str):
+    raise ValueError("Invalid email")
 user = collection.find_one({"email": email_input})
 ```
 
@@ -100,7 +107,7 @@ For more information please check following cheat sheets:
 ### Configuration Hardening
 
 - Change default ports and disable sample/demo users.
-- Turn off or restrict features that execute code on the server (e.g., MongoDB `db.eval`, server-side scripting).
+- Turn off or restrict features that execute code on the server, such as [MongoDB server-side JavaScript](https://www.mongodb.com/docs/drivers/client-libraries-best-practices/#restrict-server-side-javascript-execution).
 - Require TLS for internal replication links where supported.
 
 ### Secrets Management
@@ -155,12 +162,12 @@ For more information please check following cheat sheets:
 
 ## Examples of Dangerous Patterns (brief)
 
-- Allowing client to submit `{ "$where": "this.balance > 0" }` → remote code execution or heavy CPU.
+- Accepting client-controlled `$where` expressions executes untrusted JavaScript inside MongoDB and can consume excessive resources. Use standard query operators instead, and [disable server-side scripting](https://www.mongodb.com/docs/drivers/client-libraries-best-practices/#restrict-server-side-javascript-execution) when it is not needed.
 - Concatenating user input into query language strings or shell commands for DB tools.
 - Leaving MongoDB unsecured (no auth) listening on public IP.
 
 ## References
 
-- [MongoDB Security Official Document](https://www.mongodb.com/docs/manual/security/)
-- [Security best practices for Amazon DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/best-practices-security.html)
-- [WSTG - Testing for NoSQL Injection](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05.6-Testing_for_NoSQL_Injection)
+- [MongoDB: Security Checklist for Self-Managed Deployments](https://www.mongodb.com/docs/manual/administration/security-checklist/)
+- [Amazon DynamoDB: Preventative Security Best Practices](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/best-practices-security-preventative.html)
+- [WSTG - Testing for NoSQL Injection](https://github.com/OWASP/wstg/blob/master/document/4-Web_Application_Security_Testing/07-Injection/05.6-NoSQL_Injection.md)

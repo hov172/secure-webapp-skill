@@ -20,6 +20,8 @@ Another key feature of REST applications is the use of standard HTTP verbs and e
 
 Another key feature of REST applications is the use of [HATEOAS or Hypermedia As The Engine of Application State](https://en.wikipedia.org/wiki/HATEOAS). This provides REST applications a self-documenting nature making it easier for developers to interact with a REST service without prior knowledge.
 
+For FastAPI applications, also see the [FastAPI Security Cheat Sheet](FastAPI_Security_Cheat_Sheet.md) for dependency-based access control, request and response models, and deployment settings.
+
 ## HTTPS
 
 Secure REST services must only provide HTTPS endpoints. This protects authentication credentials in transit, for example passwords, API keys or JSON Web Tokens. It also allows clients to authenticate the service and guarantees integrity of the transmitted data.
@@ -49,14 +51,14 @@ The relying party or token consumer validates a JWT by verifying its integrity a
 
 - A relying party must verify the integrity of the JWT based on its own configuration or hard-coded logic. It must not rely on the information of the JWT header to select the verification algorithm. See [here](https://www.chosenplaintext.ca/2015/03/31/jwt-algorithm-confusion.html) and [here](https://www.youtube.com/watch?v=bW5pS4e_MX8>)
 
-Some claims have been standardized and should be present in JWT used for access controls. At least the following of the standard claims should be verified:
+For JWTs used for API access control, require and validate `iss`, `aud`, and `exp` by default; these claims are mandatory for tokens conforming to [RFC 9068, Section 2.2](https://www.rfc-editor.org/rfc/rfc9068.html#section-2.2). Require and validate any additional claims that the token profile makes mandatory. Check:
 
 - `iss` or issuer - is this a trusted issuer? Is it the expected owner of the signing key?
 - `aud` or audience - is the relying party in the target audience for this JWT?
 - `exp` or expiration time - is the current time before the end of the validity period of this token?
-- `nbf` or not before time - is the current time after the start of the validity period of this token?
+- `nbf` or not before time - if present, is the current time at or after the start of the token's validity period? This claim is optional in [RFC 7519, Section 4.1.5](https://www.rfc-editor.org/rfc/rfc7519.html#section-4.1.5); require it if the token profile requires it.
 
-As JWTs contain details of the authenticated entity (user etc.) a disconnect can occur between the JWT and the current state of the users session, for example, if the session is terminated earlier than the expiration time due to an explicit logout or an idle timeout. When an explicit session termination event occurs, a unique, server-issued identifier (the `jti` claim, optionally combined with `aud`) should be submitted to a denylist on the API which will invalidate that JWT for any requests until the expiration of the token. See the [JSON_Web_Token_Cheat_Sheet](JSON_Web_Token_Cheat_Sheet.md#no-built-in-token-revocation-by-the-user) for further details.
+As JWTs contain details of the authenticated entity (user etc.) a disconnect can occur between the JWT and the current state of the users session, for example, if the session is terminated earlier than the expiration time due to an explicit logout or an idle timeout. When an explicit session termination event occurs, a unique, server-issued identifier (the `jti` claim, optionally combined with `aud`) should be submitted to a denylist on the API which will invalidate that JWT for any requests until the expiration of the token. See the [JSON_Web_Token_Cheat_Sheet](JSON_Web_Token_Cheat_Sheet.md#jwt-denylist) for further details.
 
 ## API Keys
 
@@ -145,7 +147,7 @@ A REST request or response body should match the intended content type in the he
 
 ### Validate request content types
 
-- Reject requests containing unexpected or missing content type headers with HTTP response status `406 Unacceptable` or `415 Unsupported Media Type`. For requests with `Content-Length: 0` however, a `Content-type` header is optional.
+- For requests with a body, require a supported `Content-Type` according to the endpoint contract and reject unsupported media types with [`415 Unsupported Media Type`](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.16). Do not require `Content-Type` solely for requests without a body. Reserve `406 Not Acceptable` for response content negotiation.
 - For XML content types ensure appropriate XML parser hardening, see the [XXE cheat sheet](XML_External_Entity_Prevention_Cheat_Sheet.md).
 - Avoid accidentally exposing unintended content types by explicitly defining content types e.g. [Jersey](https://jersey.github.io/) (Java) `@consumes("application/json"); @produces("application/json")`. This avoids [XXE-attack](https://owasp.org/www-community/vulnerabilities/XML_External_Entity_%28XXE%29_Processing) vectors for example.
 
@@ -154,7 +156,7 @@ A REST request or response body should match the intended content type in the he
 It is common for REST services to allow multiple response types (e.g. `application/xml` or `application/json`, and the client specifies the preferred order of response types by the Accept header in the request.
 
 - **Do NOT** simply copy the `Accept` header to the `Content-type` header of the response.
-- Reject the request (ideally with a `406 Not Acceptable` response) if the `Accept` header does not specifically contain one of the allowable types.
+- Select a supported response type that matches the client's `Accept` preferences, including media ranges and quality values. If none is acceptable and no default response will be supplied, return [`406 Not Acceptable`](https://www.rfc-editor.org/rfc/rfc9110.html#section-15.5.7).
 
 Services including script code (e.g. JavaScript) in their responses must be especially careful to defend against header injection attack.
 
@@ -186,10 +188,10 @@ The following headers should be included in all API responses that may be consum
 
 | Header | Rationale |
 |--------|-----------|
-| `Cache-Control: no-store` | Header used to direct caching done by browsers. Providing `no-store` indicates that any caches of any kind (private or shared) should not store the response that contains the header. A browser must make a new request everytime the API is called to fetch the latest response. This header with a `no-store` value prevents sensitive information from being cached or stored. |
+| `Cache-Control: no-store` | Instructs compliant private and shared HTTP caches not to store the response or reuse it for another request ([RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html#section-5.2.2.5)). This does not prevent storage by application code: the [Cache API](https://developer.mozilla.org/en-US/docs/Web/API/Cache) does not honor HTTP caching headers. Keep sensitive responses out of application-managed caches; see the [offline application guidance](HTML5_Security_Cheat_Sheet.md#offline-applications). |
 | `Content-Security-Policy: frame-ancestors 'none'` | Header used to specify whether a response can be framed in a `<frame>`, `<iframe>`, `<embed>` or `<object>` element. For an API response, there is no requirement to be framed in any of those elements. Providing `frame-ancestors 'none'` prevents any domain from framing the response returned by the API call. This header protects against [drag-and-drop](https://www.w3.org/Security/wiki/Clickjacking_Threats#Drag_and_drop_attacks) style clickjacking attacks. |
 | `Content-Type` | Header to specify the content type of a response. This must be specified as per the type of content returned by an API call. If not specified or if specified incorrectly, a browser might attempt to guess the content type of the response. This can return in MIME sniffing attacks. One common content type value is `application/json` if the API response is JSON. |
-| `Strict-Transport-Security` | Header to instruct a browser that the domain should only be accessed using HTTPS, and that any future attempts to access it using HTTP should automatically be converted to HTTPS. This header ensures that API calls are made over HTTPS and protects against spoofed certificates. |
+| `Strict-Transport-Security` | For hosts covered by an active HSTS policy, instructs browsers to use HTTPS and [terminate connections with TLS errors](https://www.rfc-editor.org/rfc/rfc6797.html#section-8.4). Initial HTTP access remains exposed unless policy is already known, such as through preloading. HSTS does not protect against an attacker certificate that the client trusts; see the [HSTS threat limitations](https://www.rfc-editor.org/rfc/rfc6797.html#section-14.8). |
 | `X-Content-Type-Options: nosniff` | Header to instruct a browser to always use the MIME type that is declared in the `Content-Type` header rather than trying to determine the MIME type based on the file's content. This header with a `nosniff` value prevents browsers from performing MIME sniffing, and inappropriately interpreting responses as HTML. |
 | `X-Frame-Options: DENY` | Legacy header superseded by `Content-Security-Policy: frame-ancestors 'none'` (see above). Still recommended for compatibility with older browsers that do not support CSP Level 2. Providing `DENY` prevents any domain from framing the response. |
 
@@ -243,13 +245,18 @@ Here is a non-exhaustive selection of security related REST API **status codes**
 | 401         | Unauthorized           | Wrong or no authentication ID/password provided.                                                                                                                                                                      |
 | 403         | Forbidden              |  It's used when the authentication succeeded but authenticated user doesn't have permission to the request resource.                                                                                                |
 | 404         | Not Found              | When a non-existent resource is requested.                                                                                                                                                                            |
-| 405         | Method Not Acceptable  |  The error for an unexpected HTTP method. For example, the REST API is expecting HTTP GET, but HTTP PUT is used.                                                                                                    |
-| 406         | Unacceptable           | The client presented a content type in the Accept header which is not supported by the server API.                                                                                                                    |
+| 405         | Method Not Allowed     |  The error for an unexpected HTTP method. For example, the REST API is expecting HTTP GET, but HTTP PUT is used.                                                                                                    |
+| 406         | Not Acceptable         | No supported response representation satisfies the client's content negotiation preferences and the server will not send a default representation.                                                                                                                    |
 | 413         | Payload too large      | Use it to signal that the request size exceeded the given limit e.g. regarding file uploads.                                                                                                                          |
-| 415         | Unsupported Media Type | The requested content type is not supported by the REST service.                                                                                                                                                      |
+| 415         | Unsupported Media Type | The request content has a format that the target method does not support.                                                                                                                                                      |
 | 429         | Too Many Requests      |  The error is used when there may be DOS attack detected or the request is rejected due to rate limiting.                                                                                                           |
 | 500         | Internal Server Error  | An unexpected condition prevented the server from fulfilling the request. Be aware that the response should not reveal internal  information that helps an attacker, e.g. detailed error messages or  stack traces. |
 | 501         | Not Implemented        | The REST service does not implement the requested operation yet.                                                                                                                                                      |
 | 503         | Service Unavailable    |  The REST service is temporarily unable to process the request. Used to inform the client it should retry at a later time.                                                                                         |
 
 Additional information about HTTP return code usage in REST API can be found [here](https://www.restapitutorial.com/httpstatuscodes.html) and [here](https://restfulapi.net/http-status-codes).
+
+## References
+
+- [RFC 8725: JSON Web Token Best Current Practices](https://datatracker.ietf.org/doc/html/rfc8725)
+- [RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.4)

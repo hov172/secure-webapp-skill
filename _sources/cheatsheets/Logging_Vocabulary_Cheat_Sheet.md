@@ -10,7 +10,7 @@ In addition to the millions of dollars lost due to breaches the report finds tha
 
 ![IBM Cost of Data Breach Report 2025](../assets/cost-of-breach-2025.png)
 
-> IBM Cost of a Data Breach Study 2025, Fig.4, pg.12, [https://www.ibm.com/reports/data-breach]
+> [IBM Cost of a Data Breach Report 2025](https://www.ibm.com/forms/mkt-asset-31c90), Fig.4, pg.12
 
 This logging standard would seek to define specific keywords which, when applied consistently across software, would allow groups to simply monitor for these events terms across all applications and respond quickly in the event of attack.
 
@@ -747,7 +747,7 @@ CRITICAL
 ### malicious_sqli:[userid|IP,parameter,ruleid,useragent]
 
 **Description**
-When request input matches a SQL injection (SQLi) signature or heuristic (e.g., comment delimiters, tautologies like `' OR 1=1 --`, stacked queries, `UNION SELECT`, etc.), block the request and log the attempt.
+When request input matches a SQL injection (SQLi) signature or heuristic, log the suspected attempt. Configure blocking under a tested policy and [tune false positives for the application](https://github.com/coreruleset/coreruleset/blob/main/crs-setup.conf.example); a detection match is not proof of exploitation. Use [parameterized queries and the other primary SQL injection defenses](SQL_Injection_Prevention_Cheat_Sheet.md#primary-defenses) regardless of detection rules.
 
 _NOTE: Logging the payload is dangerous and may result in log injection. Prefer recording a detection rule ID / category and the parameter name over logging the full payload._
 
@@ -1055,7 +1055,7 @@ WARN
 ### sensitive_delete:[userid,file|object]
 
 **Description**
-All data marked as sensitive or placed into a directory/table/repository where sensitive data is stored should have deletions of the data logged and reviewed periodically. The file should not be immediately deleted but marked for deletion and an archive of the file should be maintained according to legal/privacy requirements.
+Log and periodically review deletion events for sensitive files and data. Record the action and object identifier without copying the sensitive contents into the log. Retain the underlying data according to the applicable [information-retention requirements (NIST SI-12)](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf#page=378), then [securely dispose of it and retained copies when no longer needed (SI-12(3))](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf#page=379). Keep the deletion audit record according to the [log retention and disposal requirements](Logging_Cheat_Sheet.md#disposal-of-logs); recording a deletion event does not itself require archiving the deleted file.
 
 **Level:**
 WARN
@@ -1068,7 +1068,7 @@ WARN
     "appid": "foobar.netportal_auth",
     "event": "sensitive_delete:joebob1, /users/admin/some/important/path",
     "level": "WARN",
-    "description": "User joebob1 marked file /users/admin/some/important/path for deletion",
+    "description": "User joebob1 deleted file /users/admin/some/important/path",
     ...
 }
 ```
@@ -1175,10 +1175,10 @@ INFO
 
 ---
 
-### session_logout:[userid,sessionid]
+### session_logout:[userid]
 
 **Description**
-When a user explicitly logs out (as opposed to a timeout or administrative revocation) the event may be logged. This is a more explicit alternative to `session_expired:[userid,logout]` for systems that distinguish a user-initiated logout.
+When a user explicitly logs out (as opposed to a timeout or administrative revocation) the event may be logged. This is a more explicit alternative to `session_expired:[userid,logout]` for systems that distinguish a user-initiated logout. Do not include the raw session ID or bearer token. If session correlation is needed, follow the [Session Management logging guidance](Session_Management_Cheat_Sheet.md#logging-sessions-life-cycle-monitoring-creation-usage-and-destruction-of-session-ids).
 
 **Level:**
 INFO
@@ -1189,7 +1189,7 @@ INFO
 {
     "datetime": "2019-01-01 00:00:00,000",
     "appid": "foobar.netportal_auth",
-    "event": "session_logout:joebob1,kx12ab",
+    "event": "session_logout:joebob1",
     "level": "INFO",
     "description": "User joebob1 logged out",
     ...
@@ -1460,3 +1460,8 @@ WARN
 As important as what you DO log is what you DON'T log. Private or secret information, source code, keys, certs, etc. should never be logged.
 
 For comprehensive overview of items that should be excluded from logging, please see the [OWASP Logging Cheat Sheet](../cheatsheets/Logging_Cheat_Sheet.md#data-to-exclude).
+
+## References
+
+- [RFC 5424: The Syslog Protocol](https://datatracker.ietf.org/doc/html/rfc5424.html)
+- [NIST SP 800-92: Guide to Computer Security Log Management](https://csrc.nist.gov/pubs/sp/800/92/final)

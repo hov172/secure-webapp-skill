@@ -164,77 +164,13 @@ Scanner module of tool like OWASP [ZAP](https://www.zaproxy.org/) have module to
 
 ##### Remediation
 
-###### Escape all variables using the right LDAP encoding function
+###### Use the right LDAP encoding function
 
-The main way LDAP stores names is based on DN ([distinguished name](https://ldapwiki.com/wiki/Distinguished%20Names)). You can think of this like a unique identifier. These are sometimes used to access resources, like a username.
-
-A DN might look like this
-
-```text
-cn=Richard Feynman, ou=Physics Department, dc=Caltech, dc=edu
-```
-
-or
-
-```text
-uid=inewton, ou=Mathematics Department, dc=Cambridge, dc=com
-```
-
-There are certain characters that are considered special characters in a DN. The exhaustive list is the following: `\ # + < > , ; " =` and leading or trailing spaces
-
-Each DN points to exactly 1 entry, which can be thought of sort of like a row in a RDBMS. For each entry, there will be 1 or more attributes which are analogous to RDBMS columns. If you are interested in searching through LDAP for users will certain attributes, you may do so with search filters. In a search filter, you can use standard boolean logic to get a list of users matching an arbitrary constraint. Search filters are written in Polish notation AKA prefix notation.
-
-Example:
-
-```text
-(&(ou=Physics)(| (manager=cn=Freeman Dyson,ou=Physics,dc=Caltech,dc=edu)
-(manager=cn=Albert Einstein,ou=Physics,dc=Princeton,dc=edu) ))
-```
-
-When building LDAP queries in application code, you MUST escape any untrusted data that is added to any LDAP query. There are two forms of LDAP escaping. Encoding for LDAP Search and Encoding for LDAP DN (distinguished name). The proper escaping depends on whether you are sanitizing input for a search filter, or you are using a DN as a username-like credential for accessing some resource.
-
-##### Example code - Java
-
-###### Safe Java for LDAP escaping Example
-
-```java
-public String escapeDN (String name) {
- //From RFC 2253 and the / character for JNDI
- final char[] META_CHARS = {'+', '"', '<', '>', ';', '/'};
- String escapedStr = new String(name);
- //Backslash is both a Java and an LDAP escape character,
- //so escape it first
- escapedStr = escapedStr.replaceAll("\\\\\\\\","\\\\\\\\");
- //Positional characters - see RFC 2253
- escapedStr = escapedStr.replaceAll("\^#","\\\\\\\\#");
- escapedStr = escapedStr.replaceAll("\^ | $","\\\\\\\\ ");
- for (int i=0 ; i < META_CHARS.length ; i++) {
-        escapedStr = escapedStr.replaceAll("\\\\" +
-                     META_CHARS[i],"\\\\\\\\" + META_CHARS[i]);
- }
- return escapedStr;
-}
-```
-
-Note, that the backslash character is a Java String literal and a regular expression escape character.
-
-```java
-public String escapeSearchFilter (String filter) {
- //From RFC 2254
- String escapedStr = new String(filter);
- escapedStr = escapedStr.replaceAll("\\\\\\\\","\\\\\\\\5c");
- escapedStr = escapedStr.replaceAll("\\\\\*","\\\\\\\\2a");
- escapedStr = escapedStr.replaceAll("\\\\(","\\\\\\\\28");
- escapedStr = escapedStr.replaceAll("\\\\)","\\\\\\\\29");
- escapedStr = escapedStr.replaceAll("\\\\" +
-               Character.toString('\\u0000'), "\\\\\\\\00");
- return escapedStr;
-}
-```
+LDAP distinguished names and LDAP search filters require different escaping rules, defined by [RFC 4514](https://datatracker.ietf.org/doc/html/rfc4514) and [RFC 4515](https://datatracker.ietf.org/doc/html/rfc4515), respectively. Avoid custom escaping code and use a library encoder for the correct context. See the [LDAP Injection Prevention Cheat Sheet](LDAP_Injection_Prevention_Cheat_Sheet.md) for current defenses and examples.
 
 #### XPath Injection
 
-TODO
+See the [XPath Injection Prevention Cheat Sheet](XPath_Injection_Prevention_Cheat_Sheet.md) for defenses and a parameterized query example.
 
 ### Scripting languages
 
@@ -280,14 +216,14 @@ If it is considered unavoidable the call to a system command incorporated with u
 ##### Incorrect Usage
 
 ```java
-ProcessBuilder b = new ProcessBuilder("C:\DoStuff.exe -arg1 -arg2");
+ProcessBuilder b = new ProcessBuilder("C:\\DoStuff.exe -arg1 -arg2");
 ```
 
-In this example, the command together with the arguments are passed as a one string, making easy to manipulate that expression and inject malicious strings.
+This creates a builder with one command-list element, not a program followed by two arguments. [`ProcessBuilder`](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ProcessBuilder.html) represents the executable and its arguments as a list. The snippet does not start a process or demonstrate shell-command injection.
 
 ##### Correct Usage
 
-Here is an example that starts a process with a modified working directory. The command and each of the arguments are passed separately. This make it easy to validated each term and reduces the risk to insert malicious strings.
+This illustrative example starts a process with a modified working directory and passes the executable and each argument separately. Keep the executable and working directory trusted, and validate any untrusted arguments for the invoked program. Argument separation does not replace [argument validation](OS_Command_Injection_Defense_Cheat_Sheet.md#layer-2).
 
 ```java
 ProcessBuilder pb = new ProcessBuilder("TrustedCmd", "TrustedArg1", "TrustedArg2");
@@ -323,3 +259,9 @@ If a parameterized API is not available, you should carefully escape special cha
 [LDAP Injection Prevention Cheat Sheet](LDAP_Injection_Prevention_Cheat_Sheet.md)
 
 [Injection Prevention Cheat Sheet in Java](Injection_Prevention_in_Java_Cheat_Sheet.md)
+
+## References
+
+- [RFC 4514: LDAP Distinguished Names](https://datatracker.ietf.org/doc/html/rfc4514)
+- [RFC 4515: LDAP Search Filters](https://datatracker.ietf.org/doc/html/rfc4515)
+- [Oracle JDBC: Using Prepared Statements](https://docs.oracle.com/javase/tutorial/jdbc/basics/prepared.html)

@@ -32,34 +32,24 @@ If the traffic data contains the symbol dot `.` at the end, it's very likely tha
 
 #### Clear-box Review
 
-The following API in Python will be vulnerable to serialization attack. Search code for the pattern below.
+Review the following APIs for untrusted input:
 
-1. The uses of `pickle/c_pickle/_pickle` with `load/loads`:
+1. Uses of [`pickle.load()` or `pickle.loads()`](https://docs.python.org/3/library/pickle.html#pickle.loads). Unpickling can execute arbitrary code; never unpickle untrusted data. `pickle.loads()` expects bytes-like input, not a Python 3 string.
 
-```python
-import pickle
-data = """ cos.system(S'dir')tR. """
-pickle.loads(data)
-```
+2. Uses of [PyYAML's unsafe loaders](https://github.com/yaml/pyyaml/blob/6.0.3/lib/yaml/__init__.py#L74-L156), such as `yaml.unsafe_load()` or `yaml.load()` with `Loader=yaml.Loader` or `Loader=yaml.UnsafeLoader`. For untrusted YAML, use [`yaml.safe_load()`](https://pyyaml.org/wiki/PyYAMLDocumentation#the-yaml-package), and do not register custom constructors that allow arbitrary object creation. Current PyYAML requires an explicit `Loader` argument for `yaml.load()`.
 
-2. Uses of `PyYAML` with `load`:
-
-```python
-import yaml
-document = "!!python/object/apply:os.system ['ipconfig']"
-print(yaml.load(document))
-```
-
-3. Uses of `jsonpickle` with `encode` or `store` methods.
+3. Uses of [`jsonpickle.decode()`](https://jsonpickle.readthedocs.io/en/latest/api.html#jsonpickle.decode) with untrusted input.
 
 ### Java
 
-The following techniques are all good for preventing attacks against deserialization against [Java's Serializable format](https://docs.oracle.com/javase/7/docs/api/java/io/Serializable.html).
+For historical research on Java deserialization and defensive allowlisting, see [Java Deserialization Attacks — German OWASP Day 2016](../assets/Deserialization_Cheat_Sheet_GOD16Deserialization.pdf).
+
+The following techniques can reduce risks when using [Java's Serializable format](https://docs.oracle.com/javase/7/docs/api/java/io/Serializable.html).
 
 Implementation advice:
 
-- In your code, override the `ObjectInputStream#resolveClass()` method to prevent arbitrary classes from being deserialized. This safe behavior can be wrapped in a library like [SerialKiller](https://github.com/ikkisoft/SerialKiller).
-- Use a safe replacement for the generic `readObject()` method as seen here. Note that this addresses "[billion laughs](https://en.wikipedia.org/wiki/Billion_laughs_attack)" type attacks by checking input length and number of objects deserialized.
+- Configure [serialization filters](https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html) with an application-specific class allowlist and resource limits before reading objects.
+- If maintaining a `resolveClass()` override, account for its [limitations below](#harden-your-own-javaioobjectinputstream); class checks alone do not bound resource consumption.
 
 #### Clear-box Review
 
@@ -114,16 +104,16 @@ private final void readObject(ObjectInputStream in) throws java.io.IOException {
 
 #### Harden Your Own java.io.ObjectInputStream
 
-The `java.io.ObjectInputStream` class is used to deserialize objects. It's possible to harden its behavior by subclassing it. This is the best solution if:
+The `java.io.ObjectInputStream` class is used to deserialize objects. A custom class-resolution allowlist may be useful if:
 
 - you can change the code that does the deserialization;
 - you know what classes you expect to deserialize.
 
-The general idea is to override [`ObjectInputStream.html#resolveClass()`](http://docs.oracle.com/javase/7/docs/api/java/io/ObjectInputStream.html#resolveClass(java.io.ObjectStreamClass)) in order to restrict which classes are allowed to be deserialized.
+The general idea is to override `ObjectInputStream.resolveClass()` to restrict ordinary class resolution during deserialization.
 
-Because this call happens before a `readObject()` is called, you can be sure that no deserialization activity will occur unless the type is one that you allow.
+This does not check every object: the [serialization specification](https://docs.oracle.com/en/java/javase/17/docs/specs/serialization/input.html#the-objectinputstream-class) handles strings separately and resolves dynamic proxy class descriptors through `resolveProxyClass()`.
 
-A simple example is shown here, where the `LookAheadObjectInputStream` class is guaranteed to **not** deserialize any other type besides the `Bicycle` class:
+The following example allows only `Bicycle` through `resolveClass()`. It is an illustrative class check, not a complete deserialization defense:
 
 ```java
 public class LookAheadObjectInputStream extends ObjectInputStream {
@@ -133,7 +123,7 @@ public class LookAheadObjectInputStream extends ObjectInputStream {
     }
 
     /**
-    * Only deserialize instances of our expected Bicycle class
+    * Restrict ordinary class resolution to our expected Bicycle class
     */
     @Override
     protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
@@ -144,6 +134,8 @@ public class LookAheadObjectInputStream extends ObjectInputStream {
     }
 }
 ```
+
+Use [serialization filtering](https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html) to combine a class allowlist with limits on graph depth, references, array lengths, and stream bytes. Also bound the serialized input size separately: filters are not called for concretely encoded strings or primitives. Filtering does not make arbitrary untrusted deserialization safe.
 
 More complete implementations of this approach have been proposed by various community members:
 
@@ -357,30 +349,6 @@ If the application knows before deserialization which messages will need to be p
 
 ## References
 
-- [Java-Deserialization-Cheat-Sheet](https://github.com/GrrrDog/Java-Deserialization-Cheat-Sheet)
-- [Deserialization of untrusted data](https://owasp.org/www-community/vulnerabilities/Deserialization_of_untrusted_data)
-- [Java Deserialization Attacks - German OWASP Day 2016](../assets/Deserialization_Cheat_Sheet_GOD16Deserialization.pdf)
-- [AppSecCali 2015 - Marshalling Pickles](http://www.slideshare.net/frohoff1/appseccali-2015-marshalling-pickles)
-- [FoxGlove Security - Vulnerability Announcement](http://foxglovesecurity.com/2015/11/06/what-do-weblogic-websphere-jboss-jenkins-opennms-and-your-application-have-in-common-this-vulnerability/#websphere)
-- [Java deserialization cheat sheet aimed at pen testers](https://github.com/GrrrDog/Java-Deserialization-Cheat-Sheet)
-- [A proof-of-concept tool for generating payloads that exploit unsafe Java object deserialization.](https://github.com/frohoff/ysoserial)
-- [Java De-serialization toolkits](https://github.com/brianwrf/hackUtils)
-- [Java de-serialization tool](https://github.com/frohoff/ysoserial)
-- [Burp Suite extension](https://github.com/federicodotta/Java-Deserialization-Scanner/releases)
-- [Java secure deserialization library](https://github.com/ikkisoft/SerialKiller)
-- [Serianalyzer is a static bytecode analyzer for deserialization](https://github.com/mbechler/serianalyzer)
-- [Payload generator](https://github.com/mbechler/marshalsec)
-- [Android Java Deserialization Vulnerability Tester](https://github.com/modzero/modjoda)
-- Burp Suite Extension
-    - [JavaSerialKiller](https://github.com/NetSPI/JavaSerialKiller)
-    - [Java Deserialization Scanner](https://github.com/federicodotta/Java-Deserialization-Scanner)
-    - [Burp-ysoserial](https://github.com/summitt/burp-ysoserial)
-    - [SuperSerial](https://github.com/DirectDefense/SuperSerial)
-    - [SuperSerial-Active](https://github.com/DirectDefense/SuperSerial-Active)
-- .Net
-    - [Alvaro Muñoz: .NET Serialization: Detecting and defending vulnerable endpoints](https://www.youtube.com/watch?v=qDoBlLwREYk)
-    - [James Forshaw - Black Hat USA 2012 - Are You My Type? Breaking .net Sandboxes Through Serialization](https://www.youtube.com/watch?v=Xfbu-pQ1tIc)
-    - [Jonathan Birch BlueHat v17 - Dangerous Contents - Securing .Net Deserialization](https://www.youtube.com/watch?v=oxlD8VWWHE8)
-    - [Alvaro Muñoz & Oleksandr Mirosh - Friday the 13th: Attacking JSON - AppSecUSA 2017](https://www.youtube.com/watch?v=NqHsaVhlxAQ)
-- Python
-    - [Exploiting Insecure Deserialization bugs found in the Wild (Python Pickles)](https://macrosec.tech/index.php/2021/06/29/exploiting-insecuredeserialization-bugs-found-in-the-wild-python-pickles.)
+- [Oracle Java 17: Serialization Filtering](https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html)
+- [Microsoft: Deserialization Risks in Use of BinaryFormatter and Related Types](https://learn.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide)
+- [Python: pickle Security Warning](https://docs.python.org/3/library/pickle.html)

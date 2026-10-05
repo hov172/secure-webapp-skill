@@ -1,4 +1,4 @@
-# Testing Multi-Factor Authentication (MFA)
+# Multi-Factor Authentication (MFA)
 
 |ID          |
 |------------|
@@ -67,8 +67,8 @@ Finally, if the MFA is implemented on a different system to the main application
 The functionality used to manage MFA from inside the user's account should be tested for vulnerabilities, including:
 
 - Is the user required to re-authenticate to remove or change MFA settings?
-- Is the MFA management functionality vulnerable to [cross-site request forgery](../06-Session_Management_Testing/05-Testing_for_Cross_Site_Request_Forgery.md)?
-- Can other users' MFA setting be modified through [IDOR vulnerabilities](../05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References.md)?
+- Is the MFA management functionality vulnerable to [cross-site request forgery](../06-Session_Management/05-Cross_Site_Request_Forgery.md)?
+- Can other users' MFA setting be modified through [IDOR vulnerabilities](../05-Authorization/04-Insecure_Direct_Object_References.md)?
 
 ### Check MFA Recovery Options
 
@@ -88,11 +88,11 @@ See the ["Backup Codes" section in the Forgotten Password Cheat Sheet](https://c
 
 #### MFA Reset Process
 
-If the application implements an MFA reset process, this should be tested in the same way that the [password reset process](09-Testing_for_Weak_Password_Change_or_Reset_Functionalities.md) is tested. It is important that this process is *at least* as strong as the MFA implementation for the application.
+If the application implements an MFA reset process, this should be tested in the same way that the [password reset process](09-Weak_Password_Change_or_Reset_Functionalities.md) is tested. It is important that this process is *at least* as strong as the MFA implementation for the application.
 
 #### Alternative Authentication
 
-Some applications will allow the user to prove their identity through other means, such as the use of [security questions](08-Testing_for_Weak_Security_Question_Answer.md). This usually represents a significant weakness, as security questions provide a far lower level of security than MFA.
+Some applications will allow the user to prove their identity through other means, such as the use of [security questions](08-Weak_Security_Question_Answer.md). This usually represents a significant weakness, as security questions provide a far lower level of security than MFA.
 
 ### One-Time Passwords
 
@@ -111,7 +111,7 @@ The OTP is typically entered after the user has provided their username and pass
 - Is the account locked out after multiple failed MFA attempts?
 - Is the user's IP address blocked after multiple failed MFA attempts across different accounts?
 - Are failed MFA attempts logged?
-- Is the form vulnerable to injection attacks, including [SQL wildcard injection](../07-Input_Validation_Testing/05-Testing_for_SQL_Injection.md#sql-wildcard-injection)?
+- Is the form vulnerable to injection attacks, including [SQL wildcard injection](../07-Injection/05-SQL_Injection.md#sql-wildcard-injection)?
 
 Depending on the type of OTPs used, there are also some other specific checks that should be performed:
 
@@ -196,8 +196,8 @@ If a valid certificate can be obtained, then it should also be verified that the
 
 ## Related Test Cases
 
-- [Testing for Weak Lock Out Mechanism](03-Testing_for_Weak_Lock_Out_Mechanism.md)
-- [Testing for Weak Password Change or Reset Functionalities](09-Testing_for_Weak_Password_Change_or_Reset_Functionalities.md)
+- [Weak Lock Out Mechanism](03-Weak_Lock_Out_Mechanism.md)
+- [Weak Password Change or Reset Functionalities](09-Weak_Password_Change_or_Reset_Functionalities.md)
 
 ## Remediation
 

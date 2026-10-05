@@ -1,8 +1,8 @@
-# Testing for Reflected Cross Site Scripting
+# Reflected Cross Site Scripting
 
 |ID          |
 |------------|
-|WSTG-INPV-01|
+|WSTG-INJT-01|
 
 ## Summary
 
@@ -70,7 +70,7 @@ For a more complete reference, see the [Mozilla JavaScript guide](https://develo
 
 For example, consider a site that has a welcome notice `Welcome %username%` and a download link.
 
-![XSS Example 1](images/XSS_Example1.png)\
+![XSS Example 1](images/07-xss_example1.png)\
 *Figure 4.7.1-1: XSS Example 1*
 
 The tester must suspect that every data entry point can result in an XSS attack. To analyze it, the tester will play with the user variable and try to trigger the vulnerability.
@@ -83,7 +83,7 @@ https://example.com/index.php?user=<script>alert(123)</script>
 
 If no sanitization is applied this will result in the following popup:
 
-![Alert](images/Alert.png)\
+![Alert](images/07-alert.png)\
 *Figure 4.7.1-2: XSS Example 1*
 
 This indicates that there is an XSS vulnerability and it appears that the tester can execute code of his choice in anybody's browser if the target clicks on the tester's link.
@@ -98,7 +98,7 @@ https://example.com/index.php?user=<script>window.onload = function() {var AllLi
 
 This produces the following behavior:
 
-![XSS Example 2](images/XSS_Example2.png)\
+![XSS Example 2](images/07-xss_example2.png)\
 *Figure 4.7.1-3: XSS Example 2*
 
 This will cause the user, clicking on the link supplied by the tester, to download the file `malicious.exe` from a site they control.
@@ -179,7 +179,7 @@ This will exploit the reflected cross site scripting vulnerability shown before,
 
 #### Example 7: HTTP Parameter Pollution (HPP)
 
-Another method to bypass filters is the HTTP Parameter Pollution, this technique was first presented by Stefano di Paola and Luca Carettoni in 2009 at the OWASP Poland conference. See the [Testing for HTTP Parameter pollution](04-Testing_for_HTTP_Parameter_Pollution.md) for more information. This evasion technique consists of splitting an attack vector between multiple parameters that have the same name. The manipulation of the value of each parameter depends on how each web technology is parsing these parameters, so this type of evasion is not always possible. If the tested environment concatenates the values of all parameters with the same name, then an attacker could use this technique in order to bypass pattern- based security mechanisms.
+Another method to bypass filters is the HTTP Parameter Pollution, this technique was first presented by Stefano di Paola and Luca Carettoni in 2009 at the OWASP Poland conference. See the [HTTP Parameter pollution](04-HTTP_Parameter_Pollution.md) for more information. This evasion technique consists of splitting an attack vector between multiple parameters that have the same name. The manipulation of the value of each parameter depends on how each web technology is parsing these parameters, so this type of evasion is not always possible. If the tested environment concatenates the values of all parameters with the same name, then an attacker could use this technique in order to bypass pattern- based security mechanisms.
 Regular attack:
 
 ```text
@@ -203,7 +203,7 @@ If source code is available (white-box testing), all variables received from use
 ## Tools
 
 - [Hackvertor](https://hackvertor.co.uk/) is an online tool which allows many types of encoding and obfuscation of JavaScript (or any string input).
-- [XSS-Proxy](https://xss-proxy.sourceforge.net/) is an advanced Cross-Site-Scripting (XSS) attack tool.
+- [BeEF](https://beefproject.com) is the browser exploitation framework. A professional tool to demonstrate the real-time impact of browser vulnerabilities.
 - [ratproxy](https://code.google.com/archive/p/ratproxy/) is a semi-automated, largely passive web application security audit tool, optimized for an accurate and sensitive detection, and automatic annotation, of potential problems and security-relevant design patterns based on the observation of existing, user-initiated traffic in complex web 2.0 environments.
 - [Burp Proxy](https://portswigger.net/burp/) is an interactive HTTP/S proxy server for attacking and testing web applications.
 - [Zed Attack Proxy (ZAP)](https://www.zaproxy.org) is an interactive HTTP/S proxy server for attacking and testing web applications with a built-in scanner.

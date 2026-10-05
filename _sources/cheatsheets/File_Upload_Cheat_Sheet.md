@@ -52,6 +52,9 @@ Ensure that the validation occurs after decoding the filename, and that a proper
 
 - Double extensions, _e.g._ `.jpg.php`, where it circumvents easily the regex `\.jpg`
 - Null bytes, _e.g._ `.php%00.jpg`, where `.jpg` gets truncated and `.php` becomes the new extension
+- Case manipulation, _e.g._ `.pHp`, `.phP`, to bypass case-sensitive blocklist filters
+- Alternative extensions that may be mapped to the same server-side interpreter depending on configuration, _e.g._ `.phtml`, `.php5`, `.pht` for PHP, or `.jsp`/`.jspx`, `.asp`/`.aspx` for Java/.NET ([PortSwigger](https://portswigger.net/web-security/file-upload))
+- Windows NTFS Alternate Data Streams, _e.g._ `shell.asp:.jpg` or `shell.php::$DATA`, where the colon is interpreted as a stream separator and the actual file created on disk carries the extension before the colon - reject any filename containing a colon (`:`) ([OWASP - Unrestricted File Upload](https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload))
 - Generic bad regex that isn't properly tested and well reviewed. Refrain from building your own logic unless you have enough knowledge on this topic.
 
 Refer to the [Input Validation CS](Input_Validation_Cheat_Sheet.md) to properly parse and process the extension.
@@ -99,13 +102,15 @@ In order to avoid the above mentioned threat, creating a **random string** as a 
     - Restrict the use of a leading hyphen or spaces to make it safer to use shell scripts to process files.
     - If this is not possible, block-list dangerous characters that could endanger the framework and system that is storing and using the files.
 
+On Windows/NTFS, a long filename may have an [8.3 short name alias](https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#short-vs-long-names), depending on file system settings. Do not assume that an alias exists or has a particular spelling. If an overwrite or collision check validates only the long filename supplied by the user, an attacker who can predict the short alias of an existing sensitive file may reference it directly to overwrite that file, bypassing an exact-name or extension check. Generating the stored filename server-side, as recommended above, removes this risk, since the attacker no longer controls which file is targeted. Disabling [short-name creation](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-behavior#parameters) prevents new aliases; it does not remove existing aliases. Assess existing short names separately before relying on this setting: Microsoft documents [removal and compatibility checks](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/fsutil-8dot3name), including backup precautions before removal.
+
 ### File Content Validation
 
 As mentioned in the [Public File Retrieval](#public-file-retrieval) section, file content can contain malicious, inappropriate, or illegal data.
 
 Based on the expected type, special file content validation can be applied:
 
-- For **images**, applying image rewriting techniques destroys any kind of malicious content injected in an image; this could be done through [randomization](https://security.stackexchange.com/a/8625/118367).
+- For **images**, decode and re-encode to an allowed image format, explicitly [removing unnecessary metadata](https://imagemagick.org/command-line-options/#strip). Rewriting does not guarantee that all malicious content is removed, and the image processor itself handles untrusted input. Use an up-to-date library with [restricted formats, resource limits, and sandboxing](https://imagemagick.org/security-policy/#other).
 - For **Microsoft documents**, the usage of [Apache POI](https://poi.apache.org/) helps validating the uploaded documents.
 - **ZIP files** are not recommended since they can contain all types of files, and the attack vectors pertaining to them are numerous.
 
@@ -125,6 +130,8 @@ The location where the files should be stored must be chosen based on security a
    - If read access is required, setting proper controls is a must (_e.g._ internal IP, authorized user, etc.)
 
 Storing files in a studied manner in databases is one additional technique. This is sometimes used for automatic backup processes, non file-system attacks, and permissions issues. In return, this opens up the door to performance issues (in some cases), storage considerations for the database and its backups, and this opens up the door to SQLi attack. This is advised only when a DBA is on the team and that this process shows to be an improvement on storing them on the file-system.
+
+Be aware that an attacker may attempt to upload a web server configuration file (_e.g._ `.htaccess`, `web.config`) into the upload directory. If the web server allows per-directory configuration overrides, such a file could be used to change how that directory handles file types, for example mapping an otherwise harmless extension to be executed by the server. As a second layer of defense, disable per directory configuration overrides on upload directories at the web server level (_e.g._ Apache `AllowOverride None`, locked IIS handler mappings), in addition to storing files outside the webroot as recommended above.
 
 > Some files are emailed or processed once they are uploaded, and are not stored on the server. It is essential to conduct the security measures discussed in this sheet before doing any actions on them.
 
@@ -156,3 +163,8 @@ The application should set proper request limits as well for the download servic
 ## Java Code Snippets
 
 [Document Upload Protection](https://github.com/righettod/document-upload-protection) repository written by Dominique for certain document types in Java.
+
+## References
+
+- [Microsoft: Upload Files in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/mvc/models/file-uploads?view=aspnetcore-6.0)
+- [CWE-434: Unrestricted Upload of File with Dangerous Type](https://cwe.mitre.org/data/definitions/434.html)

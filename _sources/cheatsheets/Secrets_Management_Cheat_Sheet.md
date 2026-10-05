@@ -40,7 +40,7 @@ Manual maintenance not only increases the risk of leakage; it also introduces th
 Therefore, it is better to limit or remove the human interaction with the actual secrets. You can restrict human interaction in multiple ways:
 
 - **Secrets pipeline:** Having a secrets pipeline that does large parts of the secret management (e.g., creation, rotation, etc.)
-- **Using dynamic secrets:** When an application starts, it could request its database credentials, which, when dynamically generated, will be provided with new credentials for that session. Dynamic secrets should be used where possible to reduce the surface area of credential reuse. Should the application's database credentials be stolen, upon reboot they would be expired.
+- **Using dynamic secrets:** When an application starts, it could request its database credentials, which, when dynamically generated, will be provided with new credentials for that session. Dynamic secrets should be used where possible to reduce the surface area of credential reuse. Configure a short [lease duration](https://developer.hashicorp.com/vault/docs/concepts/lease) and revoke credentials when they are no longer needed. Restarting the application does not itself revoke stolen credentials; they remain usable until the backing service expires or revokes them.
 - **Automated rotation of static secrets:** Key rotation is a challenging process when implemented manually, and can lead to mistakes. It is therefore better to automate the rotation of keys or at least ensure that the process is sufficiently supported by IT.
 
 Rotating certain keys, such as encryption keys, might trigger full or partial data re-encryption. Different strategies for rotating keys exist:
@@ -103,44 +103,10 @@ Cloud-native secret managers often provide built-in support for automated rotati
     - The secrets manager is configured to trigger a rotation Lambda function on a schedule.
     - The Lambda function has the necessary permissions to update the database password and the secret value in the secrets manager.
     - The rotation process typically involves multiple steps (create new secret, set new secret, test new secret, finish rotation) to ensure a safe transition.
-- **AWS Lambda Rotation Function (Conceptual Python Code):**
 
-    ```python
-    import boto3
-    import os
+For AWS, start from the [rotation function templates](https://docs.aws.amazon.com/secretsmanager/latest/userguide/reference_available-rotation-templates.html). Secrets Manager invokes the function [separately for each rotation step](https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_lambda.html); retrieve the pending credential from the secret version identified by `ClientRequestToken`, rather than relying on a local variable from an earlier invocation.
 
-    def lambda_handler(event, context):
-        secret_name = event['SecretId']
-        token = event['ClientRequestToken']
-        step = event['Step']
-
-        secrets_manager = boto3.client('secretsmanager')
-        # Get the secret metadata
-        metadata = secrets_manager.describe_secret(SecretId=secret_name)
-
-        if step == "createSecret":
-            # Create a new version of the secret
-            new_password = generate_new_password()
-            secrets_manager.put_secret_value(
-                SecretId=secret_name,
-                ClientRequestToken=token,
-                SecretString=f'{{"password":"{new_password}"}}',
-                VersionStages=['AWSPENDING']
-            )
-        elif step == "setSecret":
-            # Update the database with the new password
-            update_database_password(new_password)
-        elif step == "testSecret":
-            # Test the new secret
-            test_database_connection(new_password)
-        elif step == "finishSecret":
-            # Mark the new version of the secret as current
-            secrets_manager.update_version_stage(
-                SecretId=secret_name,
-                VersionStage="AWSCURRENT",
-                MoveToVersionId=token
-            )
-    ```
+Follow the [rotation function security checks](https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotate-secrets_lambda-functions.html) and [template validation](https://github.com/aws-samples/aws-secrets-manager-rotation-lambdas/blob/master/SecretsManagerRotationTemplate/lambda_function.py): ensure rotation is enabled and the request token identifies a known secret version. Safely return if that version is already `AWSCURRENT`; otherwise, require `AWSPENDING`. Before changing credentials, validate the current credential and confirm that the pending version targets the intended database and user under the chosen rotation strategy. These checks prevent the privileged function from being redirected to another resource. Test the pending credential before promoting its version to `AWSCURRENT`.
 
 These examples demonstrate how you can create architectures that not only manage secrets securely but also automate the rotation process, significantly reducing the risk of compromised credentials.
 
@@ -296,24 +262,11 @@ Note: if you don't store metadata about the secret nor prepare to move, you will
 
 ### 2.12 Passwordless Authentication and Token Security
 
-While not a direct replacement for all types of secrets (e.g., API keys, database credentials), passwordless authentication mechanisms like **OpenID Connect (OIDC)** can significantly reduce the attack surface by moving away from user-managed passwords. Instead of passwords, applications rely on trusted identity providers (IdPs) to authenticate users and receive secure tokens.
+OpenID Connect (OIDC) lets an application delegate user authentication to an identity provider (IdP), instead of storing and verifying the user's password itself. It does not require passwordless authentication: [OpenID Connect Core Section 3.1.2.3](https://openid.net/specs/openid-connect-core-1_0.html#Authenticates) leaves the IdP's authentication method, including passwords, outside the protocol's scope.
 
-**How it helps:**
+OIDC alone does not eliminate phishing, credential stuffing, or weak passwords at the IdP. Choose an IdP that enforces appropriate authentication controls; for phishing resistance, require [phishing-resistant authentication](https://pages.nist.gov/800-63-4/sp800-63b/authenticators/#verifimpers), such as WebAuthn. See the [Multifactor Authentication Cheat Sheet](Multifactor_Authentication_Cheat_Sheet.md).
 
-- **Reduces Password-Related Risks:** Eliminates threats like phishing, credential stuffing, and weak password practices.
-- **Centralized Identity Management:** Authentication is handled by a specialized IdP, which can enforce strong authentication policies (e.g., MFA).
-- **Short-Lived Sessions:** OIDC tokens are typically short-lived, limiting the window of opportunity for an attacker if a token is compromised.
-
-**Token Security is Crucial:**
-
-Adopting passwordless authentication shifts the security focus from protecting static passwords to protecting dynamic tokens (e.g., ID tokens, access tokens, refresh tokens). These tokens are bearer tokens, meaning anyone who possesses one can use them. Therefore, it is critical to:
-
-- **Secure Token Transmission:** Always transmit tokens over TLS.
-- **Protect Tokens in Storage:** Do not store tokens in insecure locations like local storage in a browser. Use secure, HTTP-only cookies or appropriate secure storage mechanisms for mobile applications.
-- **Validate Tokens Correctly:** Always validate the signature, issuer, and audience of a token to ensure it is legitimate.
-- **Manage Token Lifetime:** Use short-lived access tokens and implement a secure refresh token rotation strategy.
-
-For more detailed guidance on securing OAuth 2.0 and OpenID Connect implementations, refer to the [OAuth2 Cheat Sheet](OAuth2_Cheat_Sheet.md).
+Federation still requires protecting issued tokens and any client credentials. Follow the [OAuth2 Cheat Sheet](OAuth2_Cheat_Sheet.md) for token transmission, storage, validation, expiration, and refresh-token protection. OIDC does not replace other application secrets, such as database credentials or API keys.
 
 ## 3 Continuous Integration (CI) and Continuous Deployment (CD)
 
@@ -336,7 +289,7 @@ CI/CD tooling consumes (high-privilege) credentials regularly. Ensure that the p
 There are various places where you can store a secret to execute CI/CD actions:
 
 - As part of your CI/CD tooling: you can store a secret in [GitLab](https://docs.gitlab.com/charts/installation/secrets.html)/[GitHub](https://docs.github.com/en/actions/security-guides/encrypted-secrets)/[Jenkins](https://www.jenkins.io/doc/developer/security/secrets/). This is not the same as committing it to code.
-- As part of your secrets-management system: you can store a secret in a secrets management system, such as facilities provided by a cloud provider ([AWS Secrets Manager](https://aws.amazon.com/secrets-manager/), [Azure Key Vault](https://azure.microsoft.com/nl-nl/services/key-vault/), [Google Secret Manager](https://cloud.google.com/secret-manager)), or other third-party facilities ([Hashicorp Vault](https://www.vaultproject.io/), [Conjur](https://www.conjur.org/), [Keeper](https://www.keepersecurity.com/)). In this case, the CI/CD pipeline tooling requires credentials to connect to these secret management systems to have secrets in place. See [Cloud Providers](#4-cloud-providers) for more details on using a cloud provider's secret management system.
+- As part of your secrets-management system: you can store a secret in a secrets management system, such as facilities provided by a cloud provider ([AWS Secrets Manager](https://aws.amazon.com/secrets-manager/), [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/basic-concepts), [Google Secret Manager](https://cloud.google.com/secret-manager)), or other third-party facilities ([Hashicorp Vault](https://www.vaultproject.io/), [Conjur](https://www.conjur.org/), [Keeper](https://www.keepersecurity.com/)). In this case, the CI/CD pipeline tooling requires credentials to connect to these secret management systems to have secrets in place. See [Cloud Providers](#4-cloud-providers) for more details on using a cloud provider's secret management system.
 
 Another alternative here is using the CI/CD pipeline to leverage the Encryption as a Service from the secrets management systems to do the encryption of a secret. The CI/CD tooling can then commit the encrypted secret to git, which can be fetched by the consuming service on deployment and decrypted again. See section 3.6 for more details.
 
@@ -357,7 +310,7 @@ These secrets are often configurable/viewable by people who have the authorizati
 
 #### 3.2.2 Storing it in a secrets management system
 
-Naturally, you can store secrets in a designated secrets management solution. For example, you can use a solution offered by your (cloud) infrastructure provider, such as [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/), [Google Secrets Manager](https://cloud.google.com/secret-manager), or [Azure Key Vault](https://azure.microsoft.com/nl-nl/services/key-vault/). You can find more information about these in [section 4](#4-cloud-providers) of this cheat sheet. Another option is a dedicated secrets management system, such as [Hashicorp Vault](https://www.vaultproject.io/), [Keeper](https://www.keepersecurity.com/), [Conjur](https://www.conjur.org/).
+Naturally, you can store secrets in a designated secrets management solution. For example, you can use a solution offered by your (cloud) infrastructure provider, such as [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/), [Google Secrets Manager](https://cloud.google.com/secret-manager), or [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/basic-concepts). You can find more information about these in [section 4](#4-cloud-providers) of this cheat sheet. Another option is a dedicated secrets management system, such as [Hashicorp Vault](https://www.vaultproject.io/), [Keeper](https://www.keepersecurity.com/), [Conjur](https://www.conjur.org/).
 Here are a few do's and don'ts for the CI/CD interaction with these systems. Make sure that the following is taken care of:
 
 - Rotation/Temporality: credentials used by the CI/CD tooling to authenticate against the secret management system are rotated frequently and expire after a job completes.
@@ -383,7 +336,7 @@ Logs should be queryable for at least 90 days and stored for a more extended per
 
 ### 3.5 Rotation vs Dynamic Creation
 
-You can leverage CI/CD tooling to rotate secrets or instruct other components to do the rotation of the secret. For instance, the CI/CD tool can request a secrets management system or another application to rotate the secret. Alternatively, the CI/CD tool or another component could set up a dynamic secret: a secret required for a consumer to use for as long as it lives. The secret is invalidated when the consumer no longer lives. This procedure reduces possible leakage of a secret and allows for easy detection of misuse. If an attacker uses a secret from anywhere other than the consumer's IP, you can easily detect it.
+You can leverage CI/CD tooling to rotate secrets or instruct other components to do the rotation of the secret. For instance, the CI/CD tool can request a secrets management system or another application to rotate the secret. Alternatively, the CI/CD tool or another component could set up a dynamic secret: a secret required for a consumer to use for as long as it lives. Tie invalidation to the provider's [lease expiry or explicit revocation](https://developer.hashicorp.com/vault/docs/concepts/lease); stopping the consumer alone does not revoke the secret. This procedure reduces possible leakage of a secret and allows for easy detection of misuse. If an attacker uses a secret from anywhere other than the consumer's IP, you can easily detect it.
 
 ### 3.6 Pipeline Created Secrets
 
@@ -417,7 +370,7 @@ It is also possible to use the [Systems Manager Parameter Store](https://docs.aw
 
 - you'll need to make sure you've specified encryption yourself (secrets manager does that by default)
 - it offers fewer auto-rotation capabilities (you will likely need to build a custom function)
-- it doesn't support cross-account access
+- cross-account sharing is limited to [advanced parameters](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-shared-parameters.html); sharing encrypted `SecureString` values also requires a customer managed AWS KMS key and separately granting access to that key
 - it doesn't support cross-region replication
 - there are fewer [Security Hub Controls](https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-standards-fsbp-controls.html) available
 
@@ -427,7 +380,7 @@ With [AWS Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/), you
 
 ##### 4.1.1.2 AWS CloudHSM
 
-For secrets being used in highly confidential applications, it may be needed to have more control over the encryption and storage of these keys. AWS offers [CloudHSM](https://aws.amazon.com/cloudhsm/), which lets you bring your own key (BYOK) for AWS services. Thus, you will have more control over keys' creation, lifecycle, and durability. CloudHSM allows automatic scaling and backup of your data. The cloud service provider, Amazon, will not have any access to the key material stored in **AWS CloudHSM**.
+For secrets being used in highly confidential applications, it may be needed to have more control over the encryption and storage of these keys. AWS offers [CloudHSM](https://aws.amazon.com/cloudhsm/), which lets you bring your own key (BYOK) for AWS services. Thus, you will have more control over keys' creation, lifecycle, and durability. Scale a CloudHSM cluster by [adding or removing HSMs](https://docs.aws.amazon.com/cloudhsm/latest/userguide/add-remove-hsm.html); the service makes [periodic encrypted backups of cluster users, keys, and configuration](https://docs.aws.amazon.com/cloudhsm/latest/userguide/manage-backups.html). The cloud service provider, Amazon, will not have any access to the key material stored in **AWS CloudHSM**.
 
 #### 4.1.2 GCP
 
@@ -445,7 +398,7 @@ Check out the [Secret Manager best practices](https://cloud.google.com/secret-ma
 
 For Azure, the recommended service is [Key Vault](https://docs.microsoft.com/en-us/azure/key-vault/).
 
-Contrary to other clouds, permissions are granted at the _**Key Vault**_ level. This means secrets for separate workloads and separate sensitivity levels should be in separated Key Vaults accordingly.
+Azure's [role-based access control (RBAC)](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide) supports role assignments for individual secrets, keys, and certificates. Follow the [Identity and Access Management guidance](#43-identity-and-access-management-iam) for access scopes and vault boundaries.
 
 Check out the [Key Vault best practices](https://docs.microsoft.com/en-us/azure/key-vault/general/best-practices).
 
@@ -492,7 +445,7 @@ IAM applies to both on-premises and cloud setups: to effectively manage secrets,
 
 Leverage the temporality of the IAM principals effectively: e.g., ensure that only specific roles and service accounts that require it can access the secrets. Monitor these accounts so that you can tell who or what used them to access the secrets.
 
-Next, make sure that you scope access to your secrets: one should not be simply allowed to access all secrets. In GCP and AWS, you can create fine-grained access policies to ensure that a principal cannot access all secrets at once. In Azure, having access to the key vault means having access to all secrets in that key vault. It is, thus, essential to have separate key vaults when working on Azure to segregate access.
+Next, make sure that you scope access to your secrets: one should not be simply allowed to access all secrets. In GCP and AWS, you can create fine-grained access policies to ensure that a principal cannot access all secrets at once. For Azure Key Vault, use the recommended [Azure RBAC permission model](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide) with least-privilege roles. Azure RBAC supports role assignments at the scope of individual keys, secrets, and certificates for limited sharing scenarios, but Microsoft recommends [separate vaults per application and environment](https://learn.microsoft.com/en-us/azure/key-vault/general/secure-key-vault) as the primary security boundary.
 
 ### 4.4 API limits
 
@@ -732,7 +685,7 @@ Managing secrets in a multi-cloud environment presents unique challenges due to 
 - [HashiCorp Vault](https://www.vaultproject.io/)
 - [CyberArk Conjur](https://www.conjur.org/)
 - [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/)
-- [Azure Key Vault](https://azure.microsoft.com/en-us/services/key-vault/)
+- [Azure Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/basic-concepts)
 - [Google Cloud Secret Manager](https://cloud.google.com/secret-manager)
 
 ## 11 Related Cheat Sheets & further reading
@@ -742,8 +695,9 @@ Managing secrets in a multi-cloud environment presents unique challenges due to 
 - [Password Storage Cheat Sheet](Password_Storage_Cheat_Sheet.md)
 - [Cryptographic Storage Cheat Sheet](Cryptographic_Storage_Cheat_Sheet.md)
 - [OWASP WrongSecrets project](https://github.com/OWASP/wrongsecrets/)
-- [Blog: 10 Pointers on Secrets Management](https://xebia.com/blog/secure-deployment-10-pointers-on-secrets-management/)
-- [Blog: From build to run: pointers on secure deployment](https://xebia.com/from-build-to-run-pointers-on-secure-deployment/)
-- [GitHub listing on secrets detection tools](https://github.com/topics/secrets-detection)
-- [NIST SP 800-57 Recommendation for Key Management](https://csrc.nist.gov/publications/detail/sp/800-57-part-1/rev-5/final)
-- [OpenCRE References to secrets](https://opencre.org/cre/223-780)
+
+## References
+
+- [NIST SP 800-57 Part 1 Rev. 5: Recommendation for Key Management](https://csrc.nist.gov/pubs/sp/800/57/pt1/r5/final)
+- [AWS Secrets Manager: Best practices](https://docs.aws.amazon.com/secretsmanager/latest/userguide/best-practices.html)
+- [Azure Key Vault: Secure your secrets](https://learn.microsoft.com/en-us/azure/key-vault/secrets/secure-secrets)

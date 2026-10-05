@@ -6,7 +6,7 @@ With the spread of 2FA and Passkey, the login process has become more robust, an
 
 However, if attacker can steal a valid session cookie instead, it is possible to hijack the user session for the duration of the session lifetime period. In other words, stealing a session cookie has the same impact as stealing authentication credentials until it expires. No matter how robust your authentication process is, it will not be a sufficient countermeasure for Cookie Theft.
 
-Generally, cookie theft is carried out directly against users through malware or phishing attacks. Therefore, the only thing a service can do is to _detect as quickly as possible when a stolen cookie is used_.
+Cookie theft can occur through malware, phishing, or application vulnerabilities. Apply the preventive controls in the [Session Management Cheat Sheet](Session_Management_Cheat_Sheet.md), and monitor for misuse of stolen cookies. Detection complements these controls; it does not replace them.
 
 ## Cookie Theft Mitigation
 
@@ -35,6 +35,8 @@ At the same time, even if the IP-Geo does not change, there is also the possibil
 
 ### Cookie Theft Detection
 
+For an implementation case study, see [Slack's compromised-cookie detection design](https://slack.engineering/catching-compromised-cookies/).
+
 By storing session information on the server side when a session is established, it is possible to detect session hijacking when that information is significantly changed.
 
 The following are the core information that should be saved.
@@ -49,7 +51,7 @@ In addition, the following headers, which can be change depending on the Device 
 - Accept
 - Accept-Encoding
 
-Also, recent browsers sends request headers called `Sec-Fetch-*` that provides information about the browsing contexts, so these values can also be used as a reference. It's not sent by every browser, and it's not always sent even if browser supported, so it should not be relied upon.
+The following [`Sec-CH-*` Client Hint headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Client_hints#hint_types) provide information about the browser, device, or user preferences. These differ from [`Sec-Fetch-*` Fetch Metadata headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Sec-Fetch-Site), which describe request context. Client Hints may be omitted depending on browser support, server requests, and client permissions, so treat them as optional signals.
 
 - sec-ch-prefers-color-scheme
 - sec-ch-ua
@@ -64,15 +66,15 @@ Also, recent browsers sends request headers called `Sec-Fetch-*` that provides i
 - sec-ch-ua-platform-version
 - sec-ch-ua-wow64
 
-When a session is established on the server, this information is collected and saved in association with the session like below.
+The following illustrative Express sketch assumes a server-side session store and trusted middleware that populates `req.clientIP` and `req.session`. Read request headers with [Express's `req.get()`](https://expressjs.com/en/5x/api/request/#reqget), and use a server timestamp when establishing the session:
 
 ```js
 const session = SessionStorage.create()
 session.save({
   ip: req.clientIP,
-  user_agent: req.headers.userAgent,
-  date: req.headers.date,
-  accept_language: req.headers.acceptLanguage,
+  user_agent: req.get("User-Agent"),
+  date: Date.now(),
+  accept_language: req.get("Accept-Language"),
   // ...
 })
 ```
@@ -85,24 +87,24 @@ If there is a possibility that a session has been hijacked, the most reliable ve
 
 However, as mentioned earlier, monitoring sessions has the potential for false positives, so if you have to re-authenticate too often, it will be a poor experience for the user.
 
-An alternative would be to use a CAPTCHA or similar to make a decision. This is particularly useful when a stolen session cookie is being used by a bot or other malicious program.
+A CAPTCHA may help limit automated abuse, but it does not establish that the requester controls an authenticator bound to the account, which is the basis of [authentication](https://pages.nist.gov/800-63-4/sp800-63b/introduction/). Do not treat a solved CAPTCHA as validation of a suspected stolen session. Use [reauthentication with an account-bound authenticator](Authentication_Cheat_Sheet.md#re-authentication-after-risk-events) before restoring access that depends on trusting the session.
 
-As a compromise, if there is a suspicion of session hijacking, it could be good practice to display a CAPTCHA for normal browsing, and to use re-authentication to provide reliable protection before accessing confidential information or performing actions with side effects.
+In this sketch, comparison helpers return `false` when a signal requires reauthentication. They must account for missing headers and legitimate changes. [Express middleware must end the response or call `next()`](https://expressjs.com/en/guide/using-middleware/). The error response below blocks this request; the application must also restrict or invalidate the suspect session and complete account-bound reauthentication before restoring access. This sketch does not implement session storage, authorization, or CSRF protection.
 
 ```js
-function cookieTheftDetectionMiddleware(req, res) {
+function cookieTheftDetectionMiddleware(req, res, next) {
   const currentIP = req.clientIP
   const expectedIP = req.session.ip
-  if (checkGeoIPRange(currentIP, expected) === false) {
-     // Validation
+  if (checkGeoIPRange(currentIP, expectedIP) === false) {
+    return res.status(403).send("Reauthentication required")
   }
-  const currentUA = req.userAgent
-  const expectedUA = req.session.ua
-  if (checkUserAgent(currentUA, expectedUA)) {
-    // Validation
+  const currentUA = req.get("User-Agent")
+  const expectedUA = req.session.user_agent
+  if (checkUserAgent(currentUA, expectedUA) === false) {
+    return res.status(403).send("Reauthentication required")
   }
 
-  // ...
+  next()
 }
 
 app.post("/users/delete", cookieTheftDetectionMiddleware, (req, res) => {
@@ -116,17 +118,15 @@ If this comparison has a significant impact on performance, it may be possible t
 
 ## Device Bound Session Credentials
 
-The fundamental problem that leads to Cookie Theft attack is that the session cookies are accepted without checking who sent them. Servers only check whether the values are valid. Such values are generally referred to as "Bearer Token".
+Ordinary session cookies are bearer credentials: anyone possessing a valid cookie can use it until it expires or the server invalidates it.
 
-To solve this problem, it is effective to make the Session Cookie itself as "Sender Constrained Token". The Device Bound Session Credentials API was proposed for this purpose.
+Device Bound Session Credentials (DBSC) uses a device-bound signing key to prove possession when refreshing short-lived cookies, as described in the [DBSC refresh design](https://github.com/w3c/webappsec-dbsc/blob/main/README.md#browser-initiated-refreshes). Ordinary application requests still use those cookies as bearer credentials; DBSC does not bind every request to the key.
 
-[Device Bound Session Credentials explainer](https://github.com/WICG/dbsc/blob/main/README.md)
+An attacker can replay a stolen cookie during its remaining lifetime. Protecting the key limits the attacker's ability to refresh the session from another device; it does not make a stolen cookie immediately unusable.
 
-This API combines the Public Key Encryption with the owner verification of Session Cookies. By verifying the owner using the private key generated internally by the browser, even if an attacker succeeded to steal the session cookie, they will not be able to impersonate the user unless they also steal the private key that the browser keeping secret internally.
-
-This specification is still in the drafting stages, but it's considered that it will be possible to solve the Cookie Theft Attack in the future.
+DBSC also does not prevent abuse while an attacker retains access to the compromised browser or device. Such an attacker may obtain fresh cookies or use the protected key through the compromised environment. Account for these [documented threat-model limits](https://github.com/w3c/webappsec-dbsc/blob/main/README.md#non-goals) when choosing session lifetimes and incident-response controls.
 
 ## References
 
-- [Catching Compromised Cookies - Engineering at Slack](https://slack.engineering/catching-compromised-cookies/)
-- [Device Bound Session Credentials explainer](https://github.com/WICG/dbsc/blob/main/README.md)
+- [NIST SP 800-63B-4: Authentication and Authenticator Management](https://pages.nist.gov/800-63-4/sp800-63b.html)
+- [Device Bound Session Credentials explainer](https://github.com/w3c/webappsec-dbsc/blob/main/README.md)

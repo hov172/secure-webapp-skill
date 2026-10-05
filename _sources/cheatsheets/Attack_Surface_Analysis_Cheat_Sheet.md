@@ -65,7 +65,7 @@ The total number of different attack points can easily add up into the thousands
 
 You also need to identify the valuable data (e.g. confidential, sensitive, regulated) in the application, by interviewing developers and users of the system, and again by reviewing the source code.
 
-You can also build up a picture of the Attack Surface by scanning the application. For web apps you can use a tool like [ZAP](https://www.zaproxy.org/), [Arachni](http://arachni-scanner.com/), [Skipfish](http://code.google.com/p/skipfish/), [w3af](https://docs.w3af.org), or one of the many commercial dynamic testing and vulnerability scanning tools or services to crawl your app and map the parts of the application that are accessible over the web. Some web application firewalls (WAFs) may also be able to export a model of the application's entry points.
+You can also build up a picture of the Attack Surface by scanning the application. For web apps you can use a tool like [ZAP](https://www.zaproxy.org/getting-started/#running-an-automated-scan) or another maintained dynamic testing tool to crawl your app and map the parts of the application that are accessible over the web. Some web application firewalls (WAFs) may also be able to export a model of the application's entry points.
 
 Validate and fill in your understanding of the Attack Surface by walking through some of the main use cases in the system: signing up and creating a user profile, logging in, searching for an item, placing an order, changing an order, and so on. Follow the flow of control and data through the system, see how information is validated and where it is stored, what resources are touched and what other systems are involved. There is a recursive relationship between Attack Surface Analysis and [Application Threat Modeling](https://owasp.org/www-community/Application_Threat_Modeling): changes to the Attack Surface should trigger threat modeling, and threat modeling helps you to understand the Attack Surface of the application.
 
@@ -109,3 +109,8 @@ As you add new user types or roles or privilege levels, you do the same kind of 
 This kind of threat or risk assessment can be done periodically, or as a part of design work in serial / phased / spiral / waterfall development projects, or continuously and incrementally in Agile / iterative development.
 
 Normally, an application's Attack Surface will increase over time as you add more interfaces and user types and integrate with other systems. You also want to look for ways to reduce the size of the Attack Surface when you can by simplifying the model (reducing the number of user levels for example or not storing confidential data that you don't absolutely have to), turning off features and interfaces that aren't being used, by introducing operational controls such as a Web Application Firewall (WAF) and real-time application-specific attack detection.
+
+## References
+
+- [Howard, Pincus, and Wing: Measuring Relative Attack Surfaces](https://www.cs.cmu.edu/~wing/publications/Howard-Wing03.pdf)
+- [OWASP: Threat Modeling](https://community.owasp.org/Threat_Modeling)

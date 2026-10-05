@@ -81,7 +81,7 @@ This could be a centralized log collection and management system (e.g. SIEM or S
     - For file-based logs, apply strict permissions concerning which users can access the directories, and the permissions of files within the directories
     - In web applications, the logs should not be exposed in web-accessible locations, and if done so, should have restricted access and be configured with a plain text MIME type (not HTML)
 - When using a database, it is preferable to utilize a separate database account that is only used for writing log data and which has very restrictive database, table, function and command permissions
-- Use standard formats over secure protocols to record and send event data, or log files, to other systems e.g. Common Log File System (CLFS) or Common Event Format (CEF) over syslog; standard formats facilitate integration with centralised logging services
+- Use a standard event format supported by the receiving system and a secure transport, such as the [syslog message format](https://www.rfc-editor.org/rfc/rfc5424.html#section-6) over [TLS](https://www.rfc-editor.org/rfc/rfc5425.html#section-3), to facilitate integration with centralized logging services
 
 Consider separate files/tables for extended event information such as error stack traces or a record of HTTP request and response headers and bodies.
 
@@ -94,7 +94,7 @@ There is no one size fits all solution, and a blind checklist approach can lead 
 Where possible, always log:
 
 - Input validation failures e.g. protocol violations, unacceptable encodings, invalid parameter names and values
-    - A specific event for failures to validate a value against a discrete and finite list of valid values (e.g. a country from a dropdown). This is a high security event as it can only be attack activity. For example `input_validation_fail[:field,userid]`.
+    - Log failures to validate a value against a discrete and finite list of valid values (e.g. a country from a dropdown), such as `input_validation_fail[:field,userid]`. Treat these as suspicious events, not proof of an attack: [unexpected input can also result from misuse or client defects](https://github.com/OWASP/OCSD/blob/main/Curriculum/07%20-%20Secure%20Logging/07.03%20-%20Supplementary%20Reading%20Materials.md#user-content-input-validation-failures). Evaluate severity and alerting using repetition, correlation, and request context.
 - Output validation failures e.g. database record set mismatch, invalid data encoding
 - Authentication successes and failures
    Failed authentication attempts provide critical early indicators of credential‑based attacks such as brute‑force, credential‑stuffing, and password‑spraying. Monitoring repeated failures for the same account, failures from multiple IP addresses, or rapid bursts of login attempts helps detect account takeover attempts before they succeed. This aligns with the cheat sheet’s guidance that “Authentication successes and failures” must always be logged, as these events are essential for identifying security incidents and supporting incident investigation. Refer to OWASP ASVS 7.1.1 for authentication failure logging requirements.
@@ -228,7 +228,7 @@ Document the interface referencing the organization-specific event classificatio
 
 If possible create this log handler as a standard module that can be thoroughly tested, deployed in multiple applications, and added to a list of approved and recommended modules.
 
-- Perform input validation on event data from other trust zones to ensure it is in the correct format (and consider alerting and not logging if there is an input validation failure)
+- Validate event data from other trust zones before logging it. If a field is malformed, omit or safely replace that field and record the validation failure with bounded, safe context; do not discard the entire security event. This preserves evidence while following [OWASP guidance to log validation failures and encode log data safely](https://github.com/OWASP/Top10/blob/master/2025/docs/en/A09_2025-Security_Logging_and_Alerting_Failures.md#user-content-how-to-prevent)
 - Perform sanitization on all event data to prevent log injection attacks e.g. carriage return (CR), line feed (LF) and delimiter characters (and optionally to remove sensitive data)
 - Encode data correctly for the output (logged) format
 - If writing to databases, read, understand, and apply the SQL injection cheat sheet
@@ -371,17 +371,8 @@ Who is responsible for harm?
 - An attacker prevent damages the log in order to cover their tracks.
 - An attacker causes the wrong identity to be logged in order to conceal the responsible party.
 
-## Related articles
+## References
 
-- OWASP [ESAPI Documentation](https://owasp.org/www-project-enterprise-security-api/).
-- OWASP [Logging Project](https://owasp.org/www-project-security-logging/).
-- IETF [syslog protocol](https://tools.ietf.org/rfc/rfc5424.txt).
-- Mitre [Common Event Expression (CEE)](https://cee.mitre.org/) (as of 2014 no longer actively developed).
-- NIST [SP 800-92 Guide to Computer Security Log Management](https://csrc.nist.gov/publications/nistpubs/800-92/SP800-92.pdf).
-- PCISSC [PCI DSS v2.0 Requirement 10 and PA-DSS v2.0 Requirement 4](https://www.pcisecuritystandards.org/security_standards/documents.php).
-- W3C [Extended Log File Format](https://www.w3.org/TR/WD-logfile.html).
-- Other [Build Visibility In, Richard Bejtlich, TaoSecurity blog](https://taosecurity.blogspot.co.uk/2009/08/build-visibility-in.html).
-- Other [Common Event Format (CEF), Arcsight](https://community.microfocus.com/t5/ArcSight-Connectors/ArcSight-Common-Event-Format-CEF-Implementation-Standard/ta-p/1645557).
-- Other [Log Event Extended Format (**LEEF**), IBM](https://www.ibm.com/developerworks/community/wikis/form/anonymous/api/wiki/9989d3d7-02c1-444e-92be-576b33d2f2be/page/3dc63f46-4a33-4e0b-98bf-4e55b74e556b/attachment/a19b9122-5940-4c89-ba3e-4b4fc25e2328/media/QRadar_LEEF_Format_Guide.pdf).
-- Other [Common Log File System (CLFS), Microsoft](https://msdn.microsoft.com/en-us/library/windows/desktop/bb986747(v=vs.85).aspx).
-- Other [Building Secure Applications: Consistent Logging, Rohit Sethi & Nish Bhalla, Symantec Connect](https://www.symantec.com/connect/articles/building-secure-applications-consistent-logging).
+- [NIST SP 800-92: Guide to Computer Security Log Management](https://csrc.nist.gov/pubs/sp/800/92/final)
+- [RFC 5424: The Syslog Protocol](https://datatracker.ietf.org/doc/html/rfc5424.html)
+- [W3C: Extended Log File Format (Working Draft)](https://www.w3.org/TR/WD-logfile.html)

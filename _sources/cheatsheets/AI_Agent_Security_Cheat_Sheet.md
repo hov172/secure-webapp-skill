@@ -57,26 +57,9 @@ tools = [
 ]
 ```
 
-#### Tool Authorization Middleware Example (Python)
+#### Tool Authorization Middleware
 
-```python
-from functools import wraps
-
-SENSITIVE_TOOLS = ["send_email", "execute_code", "database_write", "file_delete"]
-
-def require_confirmation(func):
-    @wraps(func)
-    async def wrapper(tool_name, params, context):
-        if tool_name in SENSITIVE_TOOLS:
-            if not context.get("user_confirmed"):
-                return {
-                    "status": "pending_confirmation",
-                    "message": f"Action '{tool_name}' requires user approval",
-                    "params": sanitize_for_display(params)
-                }
-        return await func(tool_name, params, context)
-    return wrapper
-```
+Enforce authorization in the execution component, outside the agent's context. A `user_confirmed` flag is insufficient: the component must verify that the approval belongs to the current actor and exact tool call, remains valid, and has not already been consumed. Check and consume the approval in one atomic step immediately before execution so concurrent or repeated requests cannot reuse it. Changes to the target or parameters require new approval. Apply the [High-Impact Action Integrity Controls](#high-impact-action-integrity-controls) and the [Transaction Authorization Cheat Sheet](Transaction_Authorization_Cheat_Sheet.md). Fail closed for unknown tools or missing approval requirements.
 
 ### 2. Input Validation & Prompt Injection Defense
 
@@ -183,20 +166,18 @@ class SecureAgentMemory:
 - Provide clear audit trails of agent decisions and actions.
 - Allow users to interrupt and rollback agent operations.
 
-#### Action Classification and Approval Flow
+#### Action Classification Example
 
 ```python
-import uuid
 from enum import Enum
-from dataclasses import dataclass
 
 class RiskLevel(Enum):
-    LOW = "low"           # Read operations, safe queries
-    MEDIUM = "medium"     # Write operations, API calls
-    HIGH = "high"         # Financial, deletion, external comms
-    CRITICAL = "critical" # Irreversible, security-sensitive
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
 
-ACTION_RISK_MAPPING = {
+ACTION_RISK = {
     "search_documents": RiskLevel.LOW,
     "read_file": RiskLevel.LOW,
     "write_file": RiskLevel.MEDIUM,
@@ -206,55 +187,12 @@ ACTION_RISK_MAPPING = {
     "transfer_funds": RiskLevel.CRITICAL,
 }
 
-@dataclass
-class PendingAction:
-    action_id: str
-    tool_name: str
-    parameters: dict
-    risk_level: RiskLevel
-    explanation: str
-    
-class HumanInTheLoopController:
-    def __init__(self, auto_approve_threshold: RiskLevel = RiskLevel.LOW):
-        self.auto_approve_threshold = auto_approve_threshold
-        self.pending_actions = {}
-    
-    async def request_action(self, tool_name: str, params: dict, 
-                            explanation: str) -> dict:
-        risk_level = ACTION_RISK_MAPPING.get(tool_name, RiskLevel.HIGH)
-        
-        # Auto-approve low-risk actions
-        if risk_level.value <= self.auto_approve_threshold.value:
-            return {"approved": True, "auto": True}
-        
-        # Queue for human review
-        action = PendingAction(
-            action_id=str(uuid.uuid4()),
-            tool_name=tool_name,
-            parameters=self._sanitize_params_for_display(params),
-            risk_level=risk_level,
-            explanation=explanation
-        )
-        
-        self.pending_actions[action.action_id] = action
-        
-        return {
-            "approved": False,
-            "pending": True,
-            "action_id": action.action_id,
-            "requires": "human_approval",
-            "risk_level": risk_level.value,
-            "preview": self._generate_action_preview(action)
-        }
-    
-    def _generate_action_preview(self, action: PendingAction) -> str:
-        return f"""
-        Action: {action.tool_name}
-        Risk Level: {action.risk_level.value.upper()}
-        Explanation: {action.explanation}
-        Parameters: {json.dumps(action.parameters, indent=2)}
-        """
+def needs_human_approval(tool_name: str) -> bool:
+    # Unknown tools fail closed. Only explicitly low-risk tools skip review.
+    return ACTION_RISK.get(tool_name, RiskLevel.HIGH) is not RiskLevel.LOW
 ```
+
+Only the two mapped low-risk tools skip human review in this example. Medium, high, critical, and unmapped tools require it. This classification does not grant permission to run a tool; the execution component must still check the actor's authorization and any required approval for the exact action.
 
 #### High-Impact Action Integrity Controls
 
@@ -356,8 +294,11 @@ class OutputGuardrails:
 - Maintain audit trails for compliance and forensics.
 - Log structured decision metadata for high-risk actions, including action classification, risk score when applicable, authorization outcome, approval identifier, execution result, and policy version.
 - Monitor for drift in approval behavior, repeated approval bypass attempts, elevated privilege usage, abnormal tool invocation frequency, and sudden increases in high-risk actions.
+- When the logs come from a component you did not build, see the [Verifying Third-Party Agent Execution Evidence Cheat Sheet](Verifying_Third_Party_Agent_Execution_Evidence_Cheat_Sheet.md) for how to judge what such a record establishes.
 
 #### Agent Monitoring
+
+For elapsed-time windows, use [Python's `timedelta.total_seconds()`](https://docs.python.org/3/library/datetime.html#datetime.timedelta.total_seconds); the `seconds` attribute excludes whole days.
 
 ```python
 import structlog
@@ -440,11 +381,12 @@ class AgentMonitor:
             "total_cost": 0.0,
         })
         
-        metrics["tool_calls"].append(datetime.utcnow())
+        now = datetime.utcnow()
+        metrics["tool_calls"].append(now)
         
         # Check tool call rate
         recent_calls = [t for t in metrics["tool_calls"] 
-                       if (datetime.utcnow() - t).seconds < 60]
+                       if 0 <= (now - t).total_seconds() < 60]
         if len(recent_calls) > self.ANOMALY_THRESHOLDS["tool_calls_per_minute"]:
             await self.log_security_event(
                 session_id, "anomaly_detected", "WARNING",
@@ -479,108 +421,11 @@ class AgentMonitor:
 
 #### Secure Multi-Agent Communication
 
-```python
-from typing import Optional
-import jwt
-from datetime import datetime, timedelta
+Authenticate communicating agents and enforce the sender's permissions at the receiving service before executing a request. A valid message signature does not grant permission to perform the requested action.
 
-import uuid
-from pybreaker import CircuitBreaker  # pip install pybreaker
-# Usage: CircuitBreaker(fail_max=5, reset_timeout=60)
-# Generate UUIDs inline with: str(uuid.uuid4())
+When message signatures are needed, use a maintained protocol implementation. Protect the sender, intended recipient, message type, payload, creation and expiry times, and a unique message identifier. For HTTP, [RFC 9421 explains why verification must require all security-relevant components to be signed](https://www.rfc-editor.org/rfc/rfc9421.html#section-7.2.1).
 
-class AgentTrustLevel(Enum):
-    UNTRUSTED = 0
-    INTERNAL = 1
-    PRIVILEGED = 2
-    SYSTEM = 3
-
-class SecureAgentBus:
-    """Secure communication layer for multi-agent systems."""
-    
-    def __init__(self, signing_key: bytes):
-        self.signing_key = signing_key
-        self.agent_registry = {}
-        self.message_validators = []
-        self.circuit_breakers = {}
-    
-    def register_agent(self, agent_id: str, trust_level: AgentTrustLevel,
-                       allowed_recipients: List[str]):
-        self.agent_registry[agent_id] = {
-            "trust_level": trust_level,
-            "allowed_recipients": allowed_recipients,
-            "allowed_message_types": self._get_allowed_types(trust_level)
-        }
-        self.circuit_breakers[agent_id] = CircuitBreaker(
-            fail_max=5,
-            reset_timeout=60
-        )
-    
-    async def send_message(self, sender_id: str, recipient_id: str,
-                          message_type: str, payload: dict) -> dict:
-        # Validate sender
-        sender = self.agent_registry.get(sender_id)
-        if not sender:
-            raise SecurityViolation(f"Unknown sender agent: {sender_id}")
-        
-        # Check circuit breaker
-        if self.circuit_breakers[sender_id].current_state == "open":
-            raise RuntimeError(f"Agent {sender_id} is temporarily blocked")
-        
-        # Validate recipient authorization
-        if recipient_id not in sender["allowed_recipients"]:
-            await self._log_security_event(
-                "unauthorized_message_attempt",
-                {"sender": sender_id, "recipient": recipient_id}
-            )
-            raise SecurityViolation("Sender not authorized to message recipient")
-        
-        # Validate message type
-        if message_type not in sender["allowed_message_types"]:
-            raise SecurityViolation(f"Message type '{message_type}' not allowed")
-        
-        # Sanitize payload
-        sanitized_payload = self._sanitize_payload(payload, sender["trust_level"])
-        
-        # Create signed message
-        signed_message = {
-            "sender": sender_id,
-            "recipient": recipient_id,
-            "type": message_type,
-            "payload": sanitized_payload,
-            "timestamp": datetime.utcnow().isoformat(),
-            "signature": self._sign_message(sender_id, recipient_id, 
-                                           message_type, sanitized_payload)
-        }
-        
-        return signed_message
-    
-    async def receive_message(self, recipient_id: str, message: dict) -> dict:
-        # Verify signature
-        if not self._verify_signature(message):
-            raise SecurityViolation("Invalid message signature")
-        
-        # Check message freshness (prevent replay attacks)
-        msg_time = datetime.fromisoformat(message["timestamp"])
-        if (datetime.utcnow() - msg_time) > timedelta(minutes=5):
-            raise SecurityViolation("Message expired (possible replay attack)")
-        
-        # Validate recipient
-        if message["recipient"] != recipient_id:
-            raise SecurityViolation("Message recipient mismatch")
-        
-        return message["payload"]
-    
-    def _sanitize_payload(self, payload: dict, trust_level: AgentTrustLevel) -> dict:
-        """Remove sensitive data based on trust level."""
-        if trust_level < AgentTrustLevel.PRIVILEGED:
-            # Remove system-level fields for lower trust agents
-            payload = {k: v for k, v in payload.items() 
-                      if not k.startswith("_system")}
-        
-        # Always sanitize potential injection content
-        return sanitize_untrusted_content(payload)
-```
+Enforce a bounded validity window and reject repeated message identifiers before execution. A timestamp check alone permits repeated execution within that window; see [RFC 9421's replay considerations](https://www.rfc-editor.org/rfc/rfc9421.html#section-7.2.2). Check and record each identifier in one atomic step, and keep the record for the entire acceptance window, including any clock-skew allowance. Share that state across every receiver instance that can accept the message, and reject messages when it is unavailable; [RFC 9449's DPoP replay guidance notes that single-use checks may not be feasible when servers behind one endpoint have no shared state](https://www.rfc-editor.org/rfc/rfc9449.html#section-11.1). Keep transport encryption: [message signatures do not provide confidentiality](https://www.rfc-editor.org/rfc/rfc9421.html#section-7.1.2).
 
 ### 8. Data Protection & Privacy
 
@@ -755,8 +600,5 @@ For production agents, retain evidence that shows:
 
 ## References
 
-- [OWASP LLM Top 10](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
-- [OWASP LLM Prompt Injection Prevention Cheat Sheet](LLM_Prompt_Injection_Prevention_Cheat_Sheet.md)
-- [NIST AI Risk Management Framework](https://www.nist.gov/itl/ai-risk-management-framework)
-- [OpenAI Safety Best Practices](https://platform.openai.com/docs/guides/safety-best-practices)
-- [Google Secure AI Framework (SAIF)](https://safety.google/safety/saif/)
+- [OWASP LLM06:2025 Excessive Agency](https://genai.owasp.org/llmrisk/llm062025-excessive-agency/)
+- [NIST Artificial Intelligence Risk Management Framework (AI RMF 1.0)](https://doi.org/10.6028/NIST.AI.100-1)

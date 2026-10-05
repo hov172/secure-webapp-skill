@@ -19,24 +19,24 @@ HSTS addresses the following threats:
 
 ## Examples
 
-Simple example, using a long (2 years = 63072000 seconds) max-age. This example is dangerous since it lacks `includeSubDomains`:
+This example sets a long (2 years = 63072000 seconds) max-age for the issuing host. Without `includeSubDomains`, [this policy does not extend to its subdomains](https://www.rfc-editor.org/rfc/rfc6797.html#section-6.1.2); see the [subdomain cookie risks](#problems) below:
 
-`Strict-Transport-Security: max-age=63072000`
+`Strict-Transport-Security: max-age=63072000`
 
 This example is useful if all present and future subdomains will be HTTPS. This is a more secure option but will block access to certain pages that can only be served over HTTP:
 
-`Strict-Transport-Security: max-age=63072000; includeSubDomains`
+`Strict-Transport-Security: max-age=63072000; includeSubDomains`
 
 This example is useful if all present and future subdomains will be HTTPS. In this example we set a very short max-age in case of mistakes during initial rollout:
 
-`Strict-Transport-Security: max-age=86400; includeSubDomains`
+`Strict-Transport-Security: max-age=86400; includeSubDomains`
 
 **Recommended:**
 
 - If the site owner would like their domain to be included in the [HSTS preload list](https://hstspreload.org) maintained by Chrome (and used by Firefox and Safari), then use the header below.
 - Sending the `preload` directive from your site can have **PERMANENT CONSEQUENCES** and prevent users from accessing your site and any of its subdomains if you find you need to switch back to HTTP. Please read the details at [preload removal](https://hstspreload.org/#removal) before sending the header with `preload`.
 
-`Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+`Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
 
 The `preload` flag indicates the site owner's consent to have their domain preloaded. The site owner still needs to then go and submit the domain to the list.
 
@@ -50,10 +50,9 @@ Cookies can be manipulated from sub-domains, so omitting the `includeSubDomains`
 
 As of September 2019 HSTS is supported by [all modern browsers](https://caniuse.com/#feat=stricttransportsecurity), with the only notable exception being Opera Mini.
 
+For TLS configuration, see the [Transport Layer Security Cheat Sheet](Transport_Layer_Security_Cheat_Sheet.md).
+
 ## References
 
 - [Chromium Projects/HSTS](https://www.chromium.org/hsts/)
-- [OWASP TLS Protection Cheat Sheet](Transport_Layer_Security_Cheat_Sheet.md)
-- [sslstrip](https://github.com/moxie0/sslstrip)
-- [AppSecTutorial Series - Episode 4](https://www.youtube.com/watch?v=zEV3HOuM_Vw)
-- [Nmap NSE script to detect HSTS configuration](https://github.com/icarot/NSE_scripts/blob/master/http-hsts-verify.nse)
+- [RFC 6797: HTTP Strict Transport Security](https://www.rfc-editor.org/info/rfc6797/)

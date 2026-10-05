@@ -46,13 +46,9 @@ Finally, when administration of different defenses is performed by multiple team
 
 ### Secondary Passwords, PINs and Security Questions
 
-As well as requiring a user to enter their password when authenticating, users can also be prompted to provide additional security information such as:
+Do not use security questions as an additional authentication challenge. [OWASP ASVS 5.0 requirement 6.4.2](https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x15-V6-Authentication.md#v64-authentication-factor-lifecycle-and-recovery) excludes knowledge-based security questions. The [Security Questions Cheat Sheet](Choosing_and_Using_Security_Questions_Cheat_Sheet.md) discusses limitations in legacy systems.
 
-- A PIN
-- Specific characters from a secondary passwords or memorable word
-- Answers to [security questions](Choosing_and_Using_Security_Questions_Cheat_Sheet.md)
-
-It must be emphasised that this **does not** constitute multi-factor authentication (as both factors are the same - something you know). However, it can still provide a useful layer of protection against both credential stuffing and password spraying where proper MFA can't be implemented.
+If a secondary password, PIN, or memorable word is used, request and verify the entire secret rather than selected characters, as required by [NIST SP 800-63B-4](https://pages.nist.gov/800-63-4/sp800-63b.html#passwordver). Adding another knowledge factor does not constitute [MFA](Multifactor_Authentication_Cheat_Sheet.md); prefer an independent factor instead.
 
 ### CAPTCHA
 
@@ -126,7 +122,7 @@ These techniques provide some level of security without resorting to user tracki
 
 [ASVS v4.0 Password Security Requirements](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x11-V2-Authentication.md#v21-password-security-requirements) provision (2.1.7) on verifying new passwords presence in breached password datasets should be implemented.
 
-There are both commercial and free services that may be of use for validating passwords presence in prior breaches.  A well known free service for this is [Pwned Passwords](https://haveibeenpwned.com/Passwords). You can host a copy of the application yourself, or use the [API](https://haveibeenpwned.com/API/v2#PwnedPasswords).
+There are both commercial and free services that may be of use for validating passwords presence in prior breaches.  A well known free service for this is [Pwned Passwords](https://haveibeenpwned.com/Passwords). You can host a copy of the application yourself, or use the [API](https://haveibeenpwned.com/API/v3#PwnedPasswords).
 
 ### Notify users about unusual security events
 
@@ -138,6 +134,5 @@ Details related to current or recent logins should also be made visible to the u
 
 ## References
 
-- [OWASP Credential Stuffing Article](https://owasp.org/www-community/attacks/Credential_stuffing)
-- [OWASP Automated Threats to Web Applications](https://owasp.org/www-project-automated-threats-to-web-applications/)
-- Project: [OAT-008 Credential Stuffing](https://owasp.org/www-community/attacks/Credential_stuffing), which is one of 20 defined threats in the [OWASP Automated Threat Handbook](https://owasp.org/www-pdf-archive/Automated-threat-handbook.pdf) this project produced.
+- [OWASP: Credential Stuffing](https://community.owasp.org/attacks/Credential_stuffing)
+- [NIST SP 800-63B-4: Password Verifiers](https://pages.nist.gov/800-63-4/sp800-63b.html#passwordver)

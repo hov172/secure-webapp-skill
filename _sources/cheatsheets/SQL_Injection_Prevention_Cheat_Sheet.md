@@ -68,7 +68,7 @@ In .NET, the creation and execution of the query doesn't change. Just pass the p
 String query = "SELECT account_balance FROM user_data WHERE user_name = ?";
 try {
   OleDbCommand command = new OleDbCommand(query, connection);
-  command.Parameters.Add(new OleDbParameter("customerName", CustomerName Name.Text));
+  command.Parameters.Add(new OleDbParameter("customerName", CustomerName.Text));
   OleDbDataReader reader = command.ExecuteReader();
   // …
 } catch (OleDbException se) {
@@ -228,9 +228,9 @@ As an example, a login page requires read access to the username and password fi
 
 You can use SQL views to further increase the granularity of access by limiting the read access to specific fields of a table or joins of tables. It could have additional benefits.
 
-For example, if the system is required (perhaps due to some specific legal requirements) to store the passwords of the users, instead of salted-hashed passwords, the designer could use views to compensate for this limitation. They could revoke all access to the table (from all DB users except the owner/admin) and create a view that outputs the hash of the password field and not the field itself.
+For example, a product catalog can use a view that exposes product names and retail prices while omitting supplier costs. Grant the application's database account only `SELECT` access to that view, without access to the underlying table or other objects that expose the omitted fields. Verify your database's view privilege rules; for example, [PostgreSQL normally checks underlying table access using the view owner's privileges](https://www.postgresql.org/docs/current/sql-createview.html).
 
-Any SQL injection attack that succeeds in stealing DB information will be restricted to stealing the hash of the passwords (could even be a keyed hash), since no DB user for any of the web applications has access to the table itself.
+This limits the data exposed through a compromised application account. Queries against views still require parameterization to prevent SQL injection.
 
 ### Allow-list Input Validation
 
@@ -238,28 +238,9 @@ In addition to being a primary defense when nothing else is possible (e.g., when
 
 ## Related Articles
 
-**SQL Injection Attack Cheat Sheets**:
+See the [Query Parameterization Cheat Sheet](Query_Parameterization_Cheat_Sheet.md) for language-specific examples of prepared statements and stored procedures.
 
-The following articles describe how to exploit different kinds of SQL injection vulnerabilities on various platforms (that this article was created to help you avoid):
+## References
 
-- [SQL Injection Cheat Sheet](https://www.netsparker.com/blog/web-security/sql-injection-cheat-sheet/)
-- Bypassing WAF's with SQLi - [SQL Injection Bypassing WAF](https://owasp.org/www-community/attacks/SQL_Injection_Bypassing_WAF)
-
-**Description of SQL Injection Vulnerabilities**:
-
-- OWASP article on [SQL Injection](https://owasp.org/www-community/attacks/SQL_Injection) Vulnerabilities
-- OWASP article on [Blind_SQL_Injection](https://owasp.org/www-community/attacks/Blind_SQL_Injection) Vulnerabilities
-
-**How to Avoid SQL Injection Vulnerabilities**:
-
-- [OWASP Developers Guide](https://github.com/OWASP/DevGuide) article on how to avoid SQL injection vulnerabilities
-- OWASP Cheat Sheet that provides [numerous language specific examples of parameterized queries using both Prepared Statements and Stored Procedures](Query_Parameterization_Cheat_Sheet.md)
-- [The Bobby Tables site (inspired by the XKCD webcomic) has numerous examples in different languages of parameterized Prepared Statements and Stored Procedures](http://bobby-tables.com/)
-
-**How to Review Code for SQL Injection Vulnerabilities**:
-
-- [OWASP Code Review Guide](https://wiki.owasp.org/index.php/Category:OWASP_Code_Review_Project) article on how to [Review Code for SQL Injection](https://wiki.owasp.org/index.php/Reviewing_Code_for_SQL_Injection) Vulnerabilities
-
-**How to Test for SQL Injection Vulnerabilities**:
-
-- [OWASP Testing Guide](https://owasp.org/www-project-web-security-testing-guide) article on how to [Test for SQL Injection](https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection.html) Vulnerabilities
+- [Oracle JDBC: Using Prepared Statements](https://docs.oracle.com/javase/tutorial/jdbc/basics/prepared.html)
+- [PHP PDO: Prepared Statements and Stored Procedures](https://www.php.net/pdo.prepared-statements)

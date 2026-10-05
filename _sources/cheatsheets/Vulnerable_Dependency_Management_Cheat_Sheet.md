@@ -89,6 +89,7 @@ Prior to running the tests, 2 output paths are possible:
 - All tests succeed, and thus the update can be pushed to production.
 - One or several tests failed, several output paths are possible:
     - Failure is due to change in some function calls (_e.g._ signature, argument, package, etc.). The development team must update their code to fit the new library. Once that is done, re-run the tests.
+    - The fixed version cannot be adopted at all (_e.g._ the fix only ships in a new major version that breaks the application, or the vulnerable version is pinned by a transitive dependency). Apply [Case 5](#case-5), using [Case 2](#case-2) as an interim mitigation.
     - Technical incompatibility of the released dependency (_e.g._ require a more recent runtime version) which leads to the following actions:
     1. Raise the issue to the provider.
     2. Apply [Case 2](#case-2) while waiting for the provider's feedback.
@@ -113,21 +114,21 @@ Provider can share any of the below with the development team:
 
 If a workaround is provided, it should be applied and validated on the testing environment, and thereafter deployed to production.
 
-If the provider has given the team a list of the impacted functions, protective code must wrap the calls to these functions to ensure that the input and the output data is safe.
+Identify the reachable calls to affected functions and the conditions required to exploit the vulnerability. Use a wrapper only when its checks block those conditions on every affected call path. Otherwise, disable the affected functionality or isolate it while pursuing a fix. Treat the wrapper as a temporary mitigation, and track the upgrade or replacement that removes the vulnerable dependency.
 
 Moreover, security devices, such as the Web Application Firewall (WAF), can handle such issues by protecting the internal applications through parameter validation and by generating detection rules for those specific libraries. Yet, in this cheat sheet, the focus is set on the application level in order to patch the vulnerability as close as possible to the source.
 
-_Example using java code in which the impacted function suffers from a [Remote Code Execution](https://www.netsparker.com/blog/web-security/remote-code-evaluation-execution/) issue:_
+_Illustrative allowlist wrapper: use this only if analysis of the specific vulnerability establishes that the accepted values cannot trigger it. This pattern is not a general defense against remote code execution._
 
 ```java
 public void callFunctionWithRCEIssue(String externalInput){
     //Apply input validation on the external input using regex
     if(Pattern.matches("[a-zA-Z0-9]{1,50}", externalInput)){
-        //Call the flawed function using safe input
+        //Call only with values covered by the vulnerability-specific analysis
         functionWithRCEIssue(externalInput);
     }else{
-        //Log the detection of exploitation
-        SecurityLogger.warn("Exploitation of the RCE issue XXXXX detected !");
+        //Log rejected input without assuming it was an exploit
+        SecurityLogger.warn("Input rejected by temporary vulnerability mitigation");
         //Raise an exception leading to a generic error send to the client...
     }
 }
@@ -137,7 +138,7 @@ If the provider has provided nothing about the vulnerability, [Case 3](#case-3) 
 
 **Step 2:**
 
-If the provider has provided the team with the exploitation code, and the team made a security wrapper around the vulnerable library/code, execute the exploitation code in order to ensure that the library is now secure and doesn't affect the application.
+Use any provider-supplied exploit as a regression test. Blocking that payload does not prove that the library is secure: test alternate inputs and all reachable paths to the affected functionality. The [Core Rule Set rule-writing guidance](https://coreruleset.org/docs/3-about-rules/creating/#advanced-transformation-usage) illustrates how small payload changes can bypass a filter. Follow the [virtual patch testing guidance](Virtual_Patching_Cheat_Sheet.md#implementationtesting-phase) and keep the permanent fix on the remediation plan.
 
 If you have a set of automated unit or integration or functional or security tests that exist for the application, run them to verify that the protection code added does not impact the stability of the application.
 
@@ -179,9 +180,7 @@ As we know the vulnerable dependency, we know where it is used in the applicatio
 
 Identifying calls to this dependency is fine but it is the first step. The team still lacks information on what kind of patching needs to be performed.
 
-To obtain these information, the team uses the CVE content to know which kind of vulnerability affects the dependency. The `description` property provides the answer: SQL injection, Remote Code Execution, Cross-Site Scripting, Cross-Site Request Forgery, etc.
-
-After identifying the above 2 points, the team is aware of the type of patching that needs to be taken ([Case 2](#case-2) with the protective code) and where to add it.
+Use the CVE description to identify the reported weakness, then consult the upstream advisory, issue, and fix to determine the affected behavior and required change. A vulnerability category alone does not establish which checks or configuration changes will prevent exploitation. If the root cause is still unclear, do not assume that a wrapper from [Case 2](#case-2) fixes it.
 
 _Example:_
 
@@ -194,13 +193,21 @@ XML external entity (XXE) vulnerability in XmlMapper in the Data format extensio
 (aka jackson-dataformat-xml) allows attackers to have unspecified impact via unknown vectors.
 ```
 
-Based on these information, the team determines that the necessary patching will be to add a [pre-validation of any XML data](XML_External_Entity_Prevention_Cheat_Sheet.md) passed to the Jakson API to prevent [XML external entity (XXE)](https://www.acunetix.com/blog/articles/xml-external-entity-xxe-vulnerabilities/) vulnerability.
+The [upstream issue](https://github.com/FasterXML/jackson-dataformat-xml/issues/190) and [fix](https://github.com/FasterXML/jackson-dataformat-xml/commit/f0f19a4c924d9db9a1e2830434061c8640092cc0) disable `XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES` for input factories created by Jackson. This is a parser configuration change, not generic XML pre-validation. Use a maintained release containing the fix. If an upgrade is blocked, evaluate that specific fix through [Case 5](#case-5); also harden any application-supplied parser using the [XXE prevention guidance](XML_External_Entity_Prevention_Cheat_Sheet.md#xmlinputfactory-stax).
 
 **Step 3:**
 
 If possible, create a unit test that mimics the vulnerability in order to ensure that the patch is effective and have a way to continuously ensure that the patch is in place during the evolution of the project.
 
 If you have a set of automated unit or integration or functional or security tests that exists for the application then run them to verify that the patch does not impact the stability of the application.
+
+A patch written in-house does not get the benefit of the doubt that an upstream release gets, so hold it to an explicit bar before considering the vulnerability handled:
+
+- The test reproducing the vulnerability fails against the unpatched dependency and passes against the patched one. A test that passes in both cases proves nothing about the patch.
+- The tests of the dependency itself still pass, which catches behavior that the patch broke but the application does not exercise directly.
+- The alert raised by the detection tool is suppressed per [CVE](https://en.wikipedia.org/wiki/Common_Vulnerabilities_and_Exposures) only once the two points above hold. Suppressing the alert, or changing a version string so that the tool stops matching it, records a fix but does not make one.
+
+Expect the tool to keep flagging the dependency even after a correct patch, because [looking at the version number of a package will not tell you whether the fix is present](https://access.redhat.com/security/updates/backporting). That is a reporting problem to be handled with a scoped suppression, not a reason to change the patch.
 
 ### Case 4
 
@@ -224,6 +231,44 @@ Inform the provider about the vulnerability by sharing the post with them.
 **Step 2:**
 
 Using the information from the full disclosure post or the pentester's exploitation feedback, if the provider collaborates then apply [Case 2](#case-2), otherwise apply [Case 3](#case-3), and instead of analyzing the CVE information, the team needs to analyze the information from the full disclosure post/pentester's exploitation feedback.
+
+### Case 5
+
+#### Context
+
+A fixed version has been released by the provider, but the project cannot adopt it:
+
+- The fix only ships in a new major version that breaks the application code.
+- The vulnerable version is pinned by a [transitive dependency](https://en.wikipedia.org/wiki/Transitive_dependency) that has not been updated yet.
+- The version line in use is no longer maintained and the fix landed only on a newer line.
+
+This is not [Case 3](#case-3): the fix exists and is public, so nothing has to be invented, but it has to be moved onto the version line that the project can actually run. That practice is called _backporting_, and operating system vendors have handled the same problem this way for years. [Debian](https://www.debian.org/security/faq) states that "instead of upgrading to a new release we backport security fixes to the version that was shipped in the stable release", and [Red Hat](https://access.redhat.com/security/updates/backporting) defines backporting as "the action of taking a fix for a security flaw out of the most recent version of an upstream software package and applying that fix to an older version".
+
+#### Ideal condition of application of the approach
+
+The upstream fix can be identified (a commit, a patch file, or an advisory precise enough to locate the change), the source of the version in use is available, and automated tests exist for the application features using the dependency.
+
+#### Approach
+
+**Step 1:**
+
+Confirm that the upgrade is really blocked by attempting it on a testing environment as described in [Case 1](#case-1). Backporting is cheaper than a major upgrade in the short term and more expensive over the life of the project, so it must be a deliberate choice rather than the first reflex. Record the exact blocker (breaking API, transitive pin, unsupported runtime), because that is the condition to re-test later.
+
+**Step 2:**
+
+Isolate the security-relevant change from the rest of the upstream release. Fix commits are frequently bundled with refactoring, renaming and unrelated bugfixes that must not be carried over, and the fix may rely on internal functions that do not exist in the older line, in which case the same check has to be re-implemented instead of cherry-picked. Keep the patch minimal: the goal is to block the vulnerability without changing any existing legitimate behavior.
+
+**Step 3:**
+
+Verify the patch rather than assume it. A test reproducing the vulnerability must fail against the unpatched dependency and pass against the patched one, and both the dependency's own test suite and the application tests must still pass. Silencing the scanner or bumping a version string is not remediation.
+
+**Step 4:**
+
+Distribute the patched artifact so that every build resolves it: publish it to the internal registry or proxy that the build already trusts, instead of committing a locally built file into each project. Give it a version identifier that remains traceable to the upstream version it derives from, and record its provenance (source commit, CVE, who produced it) so that the next reader can audit it. Expect detection tools to keep flagging the dependency, because [looking at the version number of a package will not tell you whether a backported fix is present](https://access.redhat.com/security/updates/backporting); suppress the alert per CVE as described in the note of [Case 2](#case-2).
+
+**Step 5:**
+
+Treat the patch as a standing commitment and not a one-off task. Every new upstream release of the dependency has to be re-patched, and every new CVE affecting it adds another patch to carry. Before deciding to maintain patches in-house, size that recurring work against acquiring maintained backports from a provider whose business is producing them. Drop the backport as soon as the fixed version becomes adoptable: re-test the blocker recorded in step 1 at each dependency review, then go back to [Case 1](#case-1).
 
 ## Tools
 
@@ -255,5 +300,22 @@ It's important to ensure, during the selection process of a vulnerable dependenc
         - [Full support](https://jfrog.com/integration/) for many languages and package manager.
     - [Renovate](https://renovatebot.com) (allow to detect old dependencies):
         - [Full support](https://renovatebot.com/docs/) for many languages and package manager.
-    - [Requires.io](https://requires.io/) (allow to detect old dependencies - open source and free option available):
-        - [Full support](https://requires.io/features/): Python only.
+
+### Remediation and maintained backports
+
+The tools above detect vulnerable dependencies, they do not fix them. When the fixed version cannot be adopted, the patch still has to come from somewhere: either the development team maintains it or someone else does.
+
+Linux distribution security teams are the reference model for the second option. [Debian](https://www.debian.org/security/faq) and [Red Hat](https://access.redhat.com/security/updates/backporting) both backport security fixes into the version shipped in the stable release instead of upgrading it. When the dependency is consumed as an operating system package, take the distribution's patched build rather than maintaining a private patch.
+
+Language ecosystem packages are rarely covered that way, so the choice there is between maintaining the patch in-house and paying someone to maintain it. Judge either option on the same criteria as a detection tool, plus:
+
+- Coverage of the ecosystems, version lines and severities the project depends on, with a published response time.
+- Publication of the patch itself and of its provenance, so that the change can be reviewed instead of being trusted blindly.
+- Delivery as a compatible artifact through a registry or proxy that the build already uses, so that no manifest rewrite is required.
+- A documented way out, so that leaving the source does not mean re-patching everything from scratch.
+
+## References
+
+- [OpenSSF: Concise Guide for Evaluating Open Source Software](https://best.openssf.org/Concise-Guide-for-Evaluating-Open-Source-Software)
+- [Debian security FAQ](https://www.debian.org/security/faq)
+- [Red Hat: Backporting Security Fixes](https://access.redhat.com/security/updates/backporting)
