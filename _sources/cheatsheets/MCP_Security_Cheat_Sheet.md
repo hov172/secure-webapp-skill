@@ -46,7 +46,7 @@ The LLM sees all tool descriptions from all connected servers in its context —
 
 - Inspect all tool descriptions, parameter names, types, and return schemas before approval.
 - Treat the *entire* tool schema as a potential injection surface — not just the `description` field.
-- Pin reviewed tool definitions using cryptographic hashes and require review when they change. This detects metadata changes, not changes to server code or behavior behind an unchanged definition; [tool annotations are hints, not enforcement](https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/#what-annotations-cant-do).
+- Pin reviewed tool definitions using cryptographic hashes and require review when they change. Hash the complete [tool definition](https://modelcontextprotocol.io/specification/2026-07-28/server/tools#tool) (including `inputSchema`, `outputSchema`, and `annotations`), not only the description; a flipped `readOnlyHint` or `destructiveHint` can change client approval behavior without any visible description change. This detects metadata changes, not changes to server code or behavior behind an unchanged definition; [tool annotations are hints, not enforcement](https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/#what-annotations-cant-do).
 - Use tools like `mcp-scan` to automatically detect poisoned descriptions and cross-server shadowing.
 - Use strict JSON Schema for tool parameters: set `additionalProperties: false` and use `pattern` (or similar) on string fields so only declared parameters and valid formats are accepted.
 
@@ -64,6 +64,9 @@ The LLM sees all tool descriptions from all connected servers in its context —
 - Display full tool call parameters to the user — not just a summary name.
 - Never auto-approve tool calls, especially in multi-server setups.
 - Ensure the confirmation UI cannot be bypassed by LLM-crafted responses.
+- Do not assume that an available MCP tool has the user's consent or approval for a particular invocation. The MCP specification states that [hosts must obtain explicit user consent before invoking any tool](https://modelcontextprotocol.io/specification/2026-07-28#key-principles) and that a human should be [able to deny tool invocations](https://modelcontextprotocol.io/specification/2026-07-28/server/tools#user-interaction-model).
+- Assess whether tool operations require additional authorization based on their possible effects, including sensitive reads, writes, data disclosure, and irreversible actions; a tool's read/write label alone may not establish the risk, and clients must treat [tool annotations as untrusted unless they come from trusted servers](https://modelcontextprotocol.io/specification/2026-07-28/server/tools#tool).
+- Choose controls according to that risk, such as explicit user confirmation, narrowly scoped authorization, or policy checks enforced at execution time. For binding approvals to specific actions and arguments and preventing their reuse, follow the [AI Agent Security Cheat Sheet](AI_Agent_Security_Cheat_Sheet.md#tool-authorization-middleware).
 
 ### 5. Input and Output Validation
 
@@ -144,6 +147,7 @@ If the threat model calls for integrity after TLS termination, choose a reviewed
 - Inspect and pin all tool descriptions and schemas.
 - Sandbox local MCP servers in containers or restricted environments.
 - Require human approval for sensitive or destructive tool calls.
+- Apply risk-appropriate authorization to sensitive tool calls and enforce its scope at execution time.
 - Validate all inputs and outputs at the MCP server layer.
 - Use `mcp-scan` or equivalent tooling to detect poisoned tools.
 - Log and monitor all tool invocations centrally.
