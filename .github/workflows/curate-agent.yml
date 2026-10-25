@@ -78,7 +78,7 @@ jobs:
           python3 scripts/eval_skill.py --check
 
       - name: Curate with Claude Code
-        uses: anthropics/claude-code-action@1d6de8cb0c237e7c15e9e1bdf973826ebae490cc # v1.0.248
+        uses: anthropics/claude-code-action@ae68417a745a5df4b2124873632bd73a2255e6f6 # v1.0.259
         with:
           # Either credential works; set whichever you prefer, or neither and
           # curate locally instead.
