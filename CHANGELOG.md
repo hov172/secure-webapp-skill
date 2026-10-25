@@ -3,6 +3,21 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.15
+
+### Changed
+
+- **Input handling: name-taking DOM sinks.** The OWASP XSS Prevention Cheat
+  Sheet now notes that `document.createElement()` takes an element *name*, not
+  text, so output encoding is the wrong defense. `references/input-handling.md`
+  lists these sinks (`createElement`, `setAttribute` name arguments) alongside
+  the other auto-escape bypasses: pick the name from a constant or allowlist.
+- Source cache refreshed (#26): grammar and link fixes across nine cheat
+  sheets and one WSTG page; the TLS sheet's `__Secure-` guidance was already
+  covered in `frontend-and-headers.md`.
+- CI: bumped `claude-code-action` to v1.0.248 and `action-gh-release` to
+  v3.0.3 (#27).
+
 ## 1.4.14
 
 ### Fixed
