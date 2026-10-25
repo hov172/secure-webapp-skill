@@ -45,6 +45,7 @@ Check in this order; load named references for depth only when needed.
 
 9. **Supply Chain** (`references/supply-chain.md`)
    Check lockfiles, dependency scan output, CI/CD, actions, artifacts. Findings: missing lockfiles, vulnerable deps, floating GitHub Actions, untrusted postinstall scripts, long-lived CI cloud secrets, no deploy approvals, no SBOM/provenance.
+   **Runtime version:** identify the language runtime release from the Dockerfile `FROM` line, version pin files (`.nvmrc`, `.python-version`, `composer.json` `platform.php`, `runtime.txt`), or CI config, and confirm it is a currently supported release with no open critical advisory. An unpatched interpreter (e.g. PHP below 8.2.35/8.3.36/8.4.27/8.5.12, CVE-2026-109618/109619 "PHP2Shell") is Critical regardless of how clean the application code is.
    **Monorepo / multi-package projects:** run `npm audit --omit=dev --audit-level=high` (or the ecosystem equivalent) in **every directory that contains a lockfile** — e.g. `frontend/`, `backend/`, shared packages. A single-workspace audit is not sufficient; a clean backend audit does not mean the frontend is clean. Also verify the CI audit threshold matches what is run locally (e.g. `--audit-level=high` not `--audit-level=critical`).
 
 10. **Design / Business Logic** (`references/insecure-design.md`)

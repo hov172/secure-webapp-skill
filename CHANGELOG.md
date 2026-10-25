@@ -3,6 +3,19 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.16
+
+### Added
+
+- **Audit step: language runtime version.** `assets/audit-checklist.md`
+  (Supply Chain) now has the auditor read the runtime release from the
+  Dockerfile, version pin files, or CI config and confirm it is a supported
+  release with no open critical advisory. Previously an unpatched interpreter
+  passed an audit as long as the application code was clean. The
+  `references/supply-chain.md` checklist gains the matching bullet, and the
+  October 2026 "PHP2Shell" pair (CVE-2026-109618/109619, CVSS 9.2) is cited as
+  the dated example that the reference's maintenance note says to refresh.
+
 ## 1.4.15
 
 ### Changed

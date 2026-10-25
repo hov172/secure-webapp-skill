@@ -10,6 +10,8 @@ Recent supply chain incidents keep showing the same pattern: attackers target de
 
 Use named incidents only as examples, not as static threat intelligence. When maintaining this reference, refresh the examples against current OWASP guidance and public advisories; the durable lesson is that dependency installation and build automation execute privileged code.
 
+The runtime itself is a dependency. In October 2026 the "PHP2Shell" pair (CVE-2026-109618, CVE-2026-109619; CVSS 9.2) gave unauthenticated remote code execution against every PHP SAPI serving web requests, with exploitation seen in the wild before many hosts had updated. No amount of application-level review catches an interpreter bug; only a current, pinned runtime version does.
+
 ## The attack, concretely
 
 Supply-chain findings get under-rated in review because they read like hygiene —
@@ -181,6 +183,7 @@ Vulnerability mgmt:
 - [ ] CI runs dependency scanning (`npm audit`, `pip-audit`, etc.) and fails on high/critical
 - [ ] Dependabot or Renovate enabled with regular cadence
 - [ ] Subscribed to advisories for critical dependencies
+- [ ] Language runtime (Node, Python, PHP, Ruby, JVM, Go toolchain) on a supported release with no open critical advisory; version is pinned in the Dockerfile or a version file so the audit can read it
 
 Install path:
 - [ ] `npm ci` / `pip install --require-hashes` in CI rather than ad-hoc installs
