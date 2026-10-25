@@ -84,6 +84,7 @@ XSS happens when user-controlled data is interpreted as HTML/JS by the browser. 
    - Django: `|safe`, `mark_safe()`, `{% autoescape off %}`
    - ERB: `<%== %>`, `raw()`, `html_safe`
    - Handlebars: `{{{ }}}`
+   - DOM APIs that take an element or attribute *name* rather than text: `document.createElement(userInput)`, `setAttribute(userInput, ...)`. These are not text sinks, so encoding does not help; pick the name from a constant or allowlist.
 
 3. **When you must render user-supplied HTML (markdown comments, rich-text), sanitize with a vetted library:**
    ```javascript
