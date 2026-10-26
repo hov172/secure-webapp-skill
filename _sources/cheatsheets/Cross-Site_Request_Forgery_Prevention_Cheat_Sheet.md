@@ -92,60 +92,11 @@ To generate HMAC CSRF tokens (with a session-dependent user value), the system m
 
 It's a common misconception to include timestamps as a value to specify the CSRF token expiration time. A CSRF Token is not an access token. They are used to verify the authenticity of requests throughout a session, using session information. A new session should generate a new token ([1](https://stackoverflow.com/a/30539335)).
 
-##### Pseudo-Code For Implementing HMAC CSRF Tokens
+##### HMAC CSRF Token Generation and Validation
 
-This illustrative pseudo-code uses lowercase hexadecimal strings for the random value and HMAC digest. Use the same encoding and length convention during generation and validation: [hex encoding represents each byte with two characters](https://docs.python.org/3/library/stdtypes.html#bytes.hex).
+Compute HMAC-SHA-256 over an unambiguous encoding of the session-dependent value and random value described above, such as length-prefixed fields. Include the HMAC and random value in the token, and set the token cookie with the Secure attribute.
 
-```code
-// Gather the values
-secret = getSecretSecurely("CSRF_SECRET") // HMAC secret key
-sessionID = session.sessionID // Current authenticated user session
-randomValue = cryptographic.randomValue(64).toHex() // 64 random bytes, encoded as 128 hex characters
-
-// Create the CSRF Token
-message = sessionID.length + "!" + sessionID + "!" + randomValue.length + "!" + randomValue // HMAC message payload
-hmac = hmac("SHA256", secret, message) // Generate the HMAC hash
-// Add the `randomValue` to the HMAC hash to create the final CSRF token.
-// Avoid using the `message` because it contains the sessionID in plain text,
-// which the server already stores separately.
-csrfToken = hmac.toHex() + "." + randomValue
-
-// Store the CSRF Token in a cookie
-response.setCookie("csrf_token=" + csrfToken + "; Secure") // Set Cookie without HttpOnly flag
-```
-
-Before validation, reject missing tokens or tokens that do not contain exactly two lowercase hexadecimal components: a 64-character SHA-256 HMAC and the 128-character random value. Recompute the HMAC using the current authenticated session, and [compare digests in the same representation with a constant-time function](https://docs.python.org/3/library/hmac.html#hmac.compare_digest):
-
-```code
-// Get the CSRF token from the request
-csrfToken = request.getParameter("csrf_token") // From header or form field (NOT cookie)
-
-// Split the token to get the randomValue
-const tokenParts = csrfToken.split(".");
-const hmacFromRequest = tokenParts[0];
-const randomValue = tokenParts[1];
-
-// Recreate the HMAC with the current session and the randomValue from the request
-secret = getSecretSecurely("CSRF_SECRET") // HMAC secret key
-sessionID = session.sessionID // Current authenticated user session
-message = sessionID.length + "!" + sessionID + "!" + randomValue.length + "!" + randomValue
-
-// Generate the expected HMAC
-expectedHmac = hmac("SHA256", secret, message).toHex()
-
-// Compare the HMAC from the request with the expected HMAC
-if (!constantTimeEquals(hmacFromRequest, expectedHmac)) {
-    // HMAC validation failed, reject the request
-    response.sendError(403, "Invalid CSRF token")
-    logError("Invalid CSRF token") // Do not log token values
-    return
-}
-
-// CSRF validation passed, continue processing the request
-// ...
-```
-
-Note: The `constantTimeEquals` function should be used to compare the HMACs to prevent timing attacks. This function compares two strings in constant time, regardless of how many characters match.
+For each protected request, read the token from a submitted header or form field, never from the cookie alone. Reject requests with missing tokens or tokens with an invalid component count, encoding, or length. Recompute the HMAC using the same encoding, the current session-dependent value, and the random value from the submitted token. Compare the submitted and expected HMACs in the same representation using a [constant-time comparison function](https://docs.python.org/3/library/hmac.html#hmac.compare_digest), and reject mismatches.
 
 ### Naive Double-Submit Cookie Pattern (DISCOURAGED)
 
@@ -405,22 +356,18 @@ For more examples of client-side CSRF, see [this post](https://www.facebook.com/
 
 ### SameSite (Cookie Attribute)
 
-SameSite is a cookie attribute (similar to HTTPOnly, Secure etc.) which aims to mitigate CSRF attacks. It is defined in [RFC6265bis](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.3.7). This attribute helps the browser decide whether to send cookies along with cross-site requests. Possible values for this attribute are `Lax`, `Strict`, or `None`.
+`SameSite` is a cookie attribute that controls whether browsers send cookies with cross-site requests. It is defined in [RFC6265bis](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-22#section-4.1.2.7) and takes one of three values:
 
-The Strict value will prevent the cookie from being sent by the browser to the target site in all cross-site browsing context, even when following a regular link. For example, if a GitHub-like website uses the Strict value, a logged-in GitHub user who tries to follow a link to a private GitHub project posted on a corporate discussion forum or email, the user will not be able to access the project because GitHub will not receive a session cookie. Since a bank website would not allow any transactional pages to be linked from external sites, so the Strict flag would be most appropriate for banks.
+- `Strict` prevents cookies from being sent with cross-site requests, including top-level navigations from external links. This can disrupt legitimate navigation into an application.
+- `Lax` sends cookies on cross-site top-level navigations that use safe HTTP methods, such as following a link, and withholds them from other cross-site requests. This balances security and usability.
+- `None` permits cookies in cross-site contexts and requires the `Secure` attribute.
 
-If a website wants to maintain a user's logged-in session after the user arrives from an external link, SameSite's default Lax value provides a reasonable balance between security and usability. If the GitHub scenario above uses a Lax value instead, the session cookie would be allowed when following a regular link from an external website while blocking it in CSRF-prone request methods such as POST. Only cross-site-requests that are allowed in Lax mode have top-level navigations and use [safe](https://tools.ietf.org/html/rfc7231#section-4.2.1) HTTP methods.
-
-For more details on the `SameSite` values, check the following [section](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02#section-5.3.7.1) from the [rfc](https://tools.ietf.org/html/draft-ietf-httpbis-rfc6265bis-02).
-
-Example of cookies using this attribute:
+Example:
 
 ```text
-Set-Cookie: JSESSIONID=xxxxx; SameSite=Strict
-Set-Cookie: JSESSIONID=xxxxx; SameSite=Lax
+Set-Cookie: JSESSIONID=xxxxx; SameSite=Strict; Secure
+Set-Cookie: JSESSIONID=xxxxx; SameSite=Lax; Secure
 ```
-
-All modern desktop and mobile browsers support the `SameSite` attribute. The main exceptions are legacy browsers including Opera Mini (all versions), UC Browser for Android, and older mobile browsers (iOS Safari < 13.2, Android Browser < 97). To track the browsers implementing it and know how the attribute is used, refer to the following [service](https://caniuse.com/#feat=same-site-cookie-attribute). Chrome implemented `SameSite=Lax` as the default behavior in 2020, and Firefox and Edge have followed suit. Additionally, the `Secure` flag is required for cookies that are marked as `SameSite=None`.
 
 #### Limitations of SameSite
 
@@ -536,69 +483,24 @@ For example, if an attacker uses CSRF to assume an authenticated identity of a t
 
 Login CSRF can be mitigated by creating pre-sessions (sessions before a user is authenticated) and including tokens in login form. You can use any of the techniques mentioned above to generate tokens. Remember that pre-sessions cannot be transitioned to real sessions once the user is authenticated - the session should be destroyed and a new one should be made to avoid [session fixation attacks](http://www.acrossecurity.com/papers/session_fixation.pdf). This technique is described in [Robust Defenses for Cross-Site Request Forgery section 4.1](https://seclab.stanford.edu/websec/csrf/csrf.pdf). Login CSRF can also be mitigated by including a custom request headers in AJAX request as described [above](#employing-custom-request-headers-for-ajaxapi).
 
-## REFERENCE: Sample JEE Filter Demonstrating CSRF Protection
-
-The following [JEE web filter](https://github.com/righettod/poc-csrf/blob/master/src/main/java/eu/righettod/poccsrf/filter/CSRFValidationFilter.java) provides an example reference for some of the concepts described in this cheatsheet. It implements the following stateless mitigations ([OWASP CSRFGuard](https://github.com/aramrami/OWASP-CSRFGuard), cover a stateful approach).
-
-- Verifying same origin with standard headers
-- Double submit cookie
-- SameSite cookie attribute
-
-**Please note** that this is only a reference sample and is not complete (for example: it doesn't have a block to direct the control flow when origin and referrer header check succeeds nor it has a port/host/protocol level validation for referrer header). Developers are recommended to build their complete mitigation on top of this reference sample. Developers should also implement authentication and authorization mechanisms before checking for CSRF is considered effective.
-
-Full source is located [here](https://github.com/righettod/poc-csrf) and provides a runnable POC.
-
 ## JavaScript: Automatically Including CSRF Tokens as an AJAX Request Header
 
-Prefer your HTTP client's maintained CSRF integration over global request overrides. For example, [Angular limits its built-in XSRF header to mutating requests to relative and same-origin URLs](https://angular.dev/best-practices/security#httpclient-xsrf-csrf-security). Attach tokens only to the application endpoints that validate them; sending a token to an unrelated origin can disclose it to that server if its CORS policy permits the request.
+JavaScript clients can send CSRF tokens in a custom request header on protected state-changing requests. Prefer maintained framework or HTTP client integrations where available. Do not add CSRF tokens through global header defaults or by globally overriding `XMLHttpRequest.prototype.open`, because unrelated requests could receive the token.
 
-Keep `GET`, `HEAD`, and `OPTIONS` free of state changes. The server must validate the token on every protected state-changing request; adding a client header alone does not enforce CSRF protection.
+Client-side CSRF handling does not replace server-side token validation. Keep `GET`, `HEAD`, and `OPTIONS` free of state changes, and validate tokens on every protected state-changing request.
 
-### Storing the CSRF Token Value in the DOM
-
-For the [synchronizer token pattern](#synchronizer-token-pattern), the server can include the token in the page, such as a `<meta>` element, and the client can read it when constructing protected requests. Use your template's attribute encoder when rendering the value. Do not put tokens in URLs or logs.
+For the [synchronizer token pattern](#synchronizer-token-pattern), the server can include the token in the page, such as in a `<meta>` element, for the client to read when constructing protected requests. Use your template's attribute encoder when rendering the value. Do not put tokens in URLs or logs.
 
 For a cookie-to-header integration, configure the server to issue and validate the token according to the [Signed Double-Submit Cookie pattern](#signed-double-submit-cookie-recommended). The token cookie must be readable by the client, while the authentication cookie should remain `HttpOnly`.
 
-### Overriding Defaults to Set Custom Header
+Restrict token attachment to explicitly trusted application endpoints. Validate the resolved request URL, not just the HTTP method or a presumed `baseURL`. Cross-origin API integrations require an explicit list of trusted destinations and a matching server-side CSRF policy. [CORS preflight does not keep a manually attached token secret from a destination that allows the request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS#preflighted_requests).
 
-Restrict token attachment by the origin of the resolved request URL, not just its HTTP method or a presumed `baseURL`. Cross-origin API integrations need an explicit list of trusted destinations and a matching server-side CSRF policy. [CORS preflight does not keep a manually attached token secret from a destination that allows the request](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS#preflighted_requests).
+Use the official documentation for client-specific behavior and configuration:
 
-#### XMLHttpRequest (Native JavaScript)
+- [Angular `HttpClient` XSRF protection](https://angular.dev/best-practices/security#httpclient-xsrf-csrf-security)
+- [Axios request configuration](https://axios.rest/pages/advanced/request-config#withxsrftoken)
 
-Set the CSRF header when constructing a request to a protected application endpoint. Avoid replacing `XMLHttpRequest.prototype.open` globally: unrelated requests also use it and could receive the token.
-
-#### CSRF Prevention in modern Frameworks
-
-Client frameworks do not replace server-side CSRF validation. Use a maintained HTTP client integration and verify which request destinations receive the token.
-
-#### Angular
-
-Use [Angular's `HttpClient` XSRF integration](https://angular.dev/best-practices/security#httpclient-xsrf-csrf-security), and configure the backend to issue the token cookie and validate the matching header. Keep its restriction to relative and same-origin destinations. Use `withXsrfConfiguration` when the server uses different cookie or header names.
-
-#### React
-
-React applications need an HTTP client and matching server-side CSRF protection. For Axios clients, use the configuration described below rather than an interceptor that adds the token to every mutating request.
-
-#### Axios
-
-Use Axios's maintained XSRF cookie-to-header support with cookie and header names that match the backend. Its [`withXSRFToken` default attaches the header only to same-origin requests](https://axios.rest/pages/advanced/request-config#withxsrftoken). Do not enable token attachment to every cross-origin destination or put the token in global method defaults.
-
-#### jQuery
-
-If using `beforeSend` to attach the token, limit it to protected state-changing requests to the same origin. Keep the destination check as well as the method check.
-
-### TypeScript Utilities for CSRF Protection
-
-TypeScript types do not enforce a CSRF trust boundary. Use the same destination restrictions and server validation as other JavaScript clients; avoid maintaining separate generic token parsers and request wrappers solely for each framework.
-
-#### Angular with TypeScript
-
-Use Angular's built-in integration described above instead of a custom interceptor that sends a token to every destination.
-
-#### React with TypeScript
-
-Use a maintained HTTP client integration as described above. If the application uses `fetch` directly, attach the token only after validating that the resolved URL targets an explicitly trusted application endpoint. Test relative URLs, absolute URLs, and rejected external destinations.
+Other JavaScript clients, including `fetch`, `XMLHttpRequest`, and jQuery, should follow the same trusted-destination restrictions and server-side validation requirements.
 
 ## References
 
