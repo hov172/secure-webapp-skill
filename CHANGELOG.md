@@ -3,6 +3,17 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.18
+
+### Added
+
+- **LLM** (`ai-and-llm.md`): hidden text in ingested documents. Extraction
+  discards rendering, so background-colored, clipped, transparent, or
+  CSS/Office-hidden text reaches the model unseen; most such payloads carry no
+  explicit instruction. Render-and-compare checks, false-positive measurement,
+  and human review or visible-text-only fallback. From the 2026-11-09 OWASP
+  LLM Prompt Injection Prevention refresh (PR #37).
+
 ## 1.4.17
 
 ### Added
