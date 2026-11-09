@@ -179,6 +179,7 @@ This is sometimes called "step-up" authentication. The session should track when
 ### Logout and forced logout
 
 - Logout button must invalidate the server-side session record immediately, then clear the cookie.
+- Revoke every session ID that belongs to the same logical session: IDs from successive or concurrent rotations, and any previous ID still accepted during a rotation grace period. A renewal already in flight during logout must not yield a usable ID.
 - After password reset or password change, invalidate **all** existing sessions for the user (other than perhaps the one that just performed the change).
 - After MFA settings change or email change, similarly invalidate all sessions.
 - When a user is deleted or suspended, invalidate all their sessions.

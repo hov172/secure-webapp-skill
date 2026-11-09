@@ -28,6 +28,8 @@ response = llm_client.generate(full_prompt)
 **Be honest about mitigation strength.** Filters and delimiters raise cost; they do not close the hole:
 
 - **Pattern filters** (`/ignore\s+previous\s+instructions/i`) catch the demo and miss base64, homoglyphs, zero-width characters, LaTeX-white-on-white, translation, and simple rephrasing. Ship them as telemetry, not as a control.
+- **Language is an attack surface.** Published tests show safety behavior degrades for low-resource languages, code-switched prompts, and transliteration (Arabizi for Arabic). Test your filters, guardrail model, and system prompt in every language you accept, and measure false positives per language; a guardrail model's documentation lists which languages it covers.
+- **Normalization has limits.** NFKC folds fullwidth and ligature forms but not zero-width characters or cross-script look-alikes (Cyrillic `і` for Latin `i`). Unicode tag characters (U+E0000 to U+E007F) render invisibly and models read them as text. Screen a normalized copy, but remember the *original* is what reaches the model: if you strip nothing, hidden text still gets through, so route unexpected zero-width or tag characters to review. Decode base64 or hex only for inspection, and cap input length before normalizing or decoding.
 - **Structured separation** (putting user data in a clearly-labeled block, or in a separate message role, or in a dedicated content field) genuinely helps and costs nothing. Do it. It is not a guarantee.
 - **Model-based guardrails** (a second model classifying the first one's input/output) help, and are themselves injectable.
 

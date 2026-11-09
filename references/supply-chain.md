@@ -118,6 +118,7 @@ For the larger functionality (cryptography, JWT, framework, ORM): use the well-k
 This is where many of the 2025 attacks landed.
 
 - **Postinstall script awareness.** npm packages can run arbitrary code on install. `pnpm` is conservative by default; `npm install --ignore-scripts` blocks them entirely. Maintain an allowlist of which packages are permitted scripts (lockfile-lint can enforce this).
+- **Installing a project you did not write** (a take-home "interview test", a repo a stranger asks you to run) is a known malware delivery route. Run it in a disposable VM with no credentials, keys, or wallets and restricted network. Before the first install, check `.npmrc` and `.yarnrc.yml` for `registry`, `npmRegistryServer`, and `yarnPath` (Yarn executes that file instead of itself), look for git, tarball, `file:`, and `link:` dependencies, and install with `--ignore-scripts`. That only postpones scripts: `npm start` and `npm test` still run them, and the app code itself can be hostile.
 - **`npm ci` (not `npm install`) in production builds** to use the lockfile faithfully.
 - **Pin GitHub Actions to commit SHAs**, not floating tags:
   ```yaml

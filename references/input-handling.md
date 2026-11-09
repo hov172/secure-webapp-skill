@@ -65,7 +65,9 @@ if sort_col not in ALLOWED_SORT:
 query = f"SELECT * FROM users ORDER BY {sort_col}"
 ```
 
-Same for `LIMIT`/`OFFSET` if not parameterizable in your driver: cast to int and clamp.
+Same for `LIMIT`/`OFFSET` if not parameterizable in your driver: cast to int and clamp. Map sort direction to the literal `ASC` or `DESC` rather than appending the supplied text.
+
+**Stored procedures.** Binding the arguments of a `CALL` protects the call, not dynamic SQL built inside the procedure. Review procedure bodies that construct SQL; use static SQL with parameters, or bind values inside the dynamic statement (PostgreSQL `EXECUTE ... USING`, with `format('%I', ...)` only for identifiers chosen from a fixed mapping). Input validation complements binding but never replaces it: a value that passed a format check still gets bound, not concatenated.
 
 **NoSQL injection** is real too. In MongoDB, accepting raw JSON request bodies into queries lets attackers send `{"$gt": ""}` to bypass auth checks. Strict input typing fixes this — coerce values to strings/numbers before they reach the query. With Mongoose, use schema validation; with raw drivers, validate types explicitly.
 
@@ -85,6 +87,7 @@ XSS happens when user-controlled data is interpreted as HTML/JS by the browser. 
    - ERB: `<%== %>`, `raw()`, `html_safe`
    - Handlebars: `{{{ }}}`
    - DOM APIs that take an element or attribute *name* rather than text: `document.createElement(userInput)`, `setAttribute(userInput, ...)`. These are not text sinks, so encoding does not help; pick the name from a constant or allowlist.
+   - CSS: never interpolate untrusted data into selectors, property names, or declaration blocks, and a property *value* position is not automatically safe either. For dynamic styling use `element.style.setProperty(fixedName, value)` with the value checked against an allowlist for that property; URL-bearing properties such as `background-image` need separate URL validation.
 
 3. **When you must render user-supplied HTML (markdown comments, rich-text), sanitize with a vetted library:**
    ```javascript
@@ -130,7 +133,16 @@ const { execFile } = require('child_process');
 execFile('convert', [filename, 'output.png']);
 ```
 
-Even with argv form, validate that filenames don't contain `../` (path traversal) — see `apis-and-files.md`.
+```java
+// DANGEROUS: Runtime.exec(String) is deprecated since Java 18. It splits on whitespace only,
+// so an argument containing a space becomes extra arguments (argument injection).
+Runtime.getRuntime().exec("convert " + filename + " output.png");
+
+// SAFE
+new ProcessBuilder("convert", filename, "output.png").start();
+```
+
+Even with argv form, validate that filenames don't contain `../` (path traversal) — see `apis-and-files.md`. Argv form also does not stop *argument* injection: a filename starting with `-` can be read as an option by the target program. Reject leading dashes or pass `--` before user-controlled arguments where the program supports it.
 
 ## Other injection contexts
 

@@ -3,6 +3,39 @@
 All notable changes to this skill. Versions follow the `VERSION` file, which
 must match `package.json`.
 
+## 1.4.17
+
+### Added
+
+Reference updates from the 2026-11-09 OWASP Cheat Sheet Series refresh (PR #32):
+
+- **CSRF** (`frontend-and-headers.md`): browser `SameSite` defaults differ
+  (Chromium Lax-by-default with the two-minute POST window; Firefox and
+  Safari none), HMAC-signed double-submit tokens with constant-time
+  comparison, and a section on JavaScript clients not attaching tokens via
+  global header defaults or `XMLHttpRequest.prototype.open` patches.
+- **XSS**: CSS-context guidance using `element.style.setProperty` with
+  per-property allowlists (`input-handling.md`); Trusted Types enforcement
+  through `require-trusted-types-for 'script'` (`frontend-and-headers.md`).
+- **Sessions** (`auth-and-sessions.md`): logout revokes every ID of the same
+  logical session, including IDs still valid during a rotation grace period.
+- **SQL injection** (`input-handling.md`): dynamic SQL inside stored
+  procedures is not protected by binding the call; sort direction mapped to
+  literal `ASC`/`DESC`.
+- **Command injection** (`input-handling.md`): Java `Runtime.exec(String)`
+  deprecation and `ProcessBuilder` example; argument injection via leading
+  dashes.
+- **SSRF** (`secure-coding.md`): NAT64 ranges (`64:ff9b::/96`,
+  `64:ff9b:1::/48`) and normalizing IPv4-mapped addresses before comparison.
+- **Logging** (`logging-and-errors.md`): CR/LF log injection, constant
+  message templates, value length caps.
+- **LLM** (`ai-and-llm.md`): multilingual, code-switched, and transliterated
+  prompt attacks; Unicode tag characters; screening a normalized copy while
+  forwarding the original.
+- **Supply chain** (`supply-chain.md`): running a project you did not write
+  (fake interview take-home malware) in a disposable VM, with `.npmrc`,
+  `.yarnrc.yml`, non-registry dependency, and `--ignore-scripts` checks.
+
 ## 1.4.16
 
 ### Added

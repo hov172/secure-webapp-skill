@@ -34,7 +34,8 @@ For any URL fetch from user input:
    - `169.254.0.0/16` (link-local, includes cloud metadata)
    - `100.64.0.0/10` (CGNAT)
    - Multicast, broadcast
-   - IPv6 equivalents: `::1`, `fc00::/7`, `fe80::/10`, `::ffff:0:0/96` (IPv4-mapped — and check the embedded IPv4 too)
+   - IPv6 equivalents: `::1`, `fc00::/7`, `fe80::/10`, `::ffff:0:0/96` (IPv4-mapped), `64:ff9b::/96` and `64:ff9b:1::/48` (NAT64)
+   - **Normalize before you compare.** Unmap IPv4-mapped and NAT64 addresses to their native IPv4 form first: `::ffff:169.254.169.254` and `64:ff9b::a9fe:a9fe` both reach the metadata IP and both slip past a check that only matches IPv4-shaped strings.
 3. **Limit protocols** to `http://` and `https://`. Reject `file://`, `gopher://`, `dict://`, etc.
 4. **Don't follow redirects** to disallowed destinations. A 302 to `http://169.254.169.254/...` bypasses defenses if redirects are followed without re-checking. Either disable redirects or re-validate at each hop.
 5. **Use a hardened HTTP client** — libraries like `ssrf-req-filter` (Node), `socksio` + custom resolver (Python), or run egress traffic through an outbound proxy that enforces destination policy.

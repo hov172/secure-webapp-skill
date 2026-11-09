@@ -33,7 +33,7 @@ The most dangerous logs are the ones that quietly leak secrets. Common patterns 
 Strategies:
 
 - **Allowlist what's logged**, not blocklist. Log specific fields you've decided are safe.
-- **Use structured logging** (JSON) with explicit fields, not interpolated strings — easier to redact at the field level.
+- **Use structured logging** (JSON) with explicit fields, not interpolated strings — easier to redact at the field level, and it closes **log injection**: in unstructured text logs, CR/LF in untrusted input forges extra log lines that look like they came from another user (CWE-93), and some frameworks treat that as working as intended. Keep message templates constant (`logger.warn("Failure for user {}", username)`, never `"... " + username`), cap the length of user-supplied values before logging, and use an encoder that escapes values. Parameterized placeholders alone do not stop CR/LF injection.
 - **Use a logging middleware that masks known-sensitive headers and body fields.**
 - **Periodically grep production logs** for things that look like secrets (e.g., `Bearer eyJ`, `password`, JWT-shaped strings) and fix the source.
 

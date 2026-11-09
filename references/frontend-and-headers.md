@@ -145,6 +145,7 @@ Threat: a user's browser visiting `evil.com` makes a request to `your-app.com` t
 
 `SameSite=Lax` mitigates most CSRF in modern browsers, but isn't a complete fix:
 
+- Browser defaults differ. Chromium treats a cookie with no `SameSite` as `Lax`; Firefox and Safari do not. Chromium also sends `Lax`-by-default cookies on cross-site top-level POSTs for about two minutes after they are set. Always set `SameSite` explicitly and never rely on the default.
 - Some clients ignore it.
 - It doesn't help against same-site attackers (subdomain takeover, XSS on a sibling subdomain).
 - It allows GET requests, which might be misused if your app violates the "GET should be safe" rule.
@@ -170,6 +171,15 @@ Use what your framework provides. Don't roll your own unless you have to.
 Server sets a random value in a non-HttpOnly cookie. Client reads it via JS, sends it as a header on requests. Server checks the cookie value matches the header value. An attacker on evil.com can't read the cookie, so can't forge the header.
 
 Less robust than the synchronizer pattern (vulnerable to subdomain attackers and cookie-jar shenanigans) but a reasonable default for SPA + JSON API.
+
+Harden it by signing: HMAC-SHA-256 over a length-prefixed encoding of a session-bound value plus a random nonce, with the HMAC and nonce in the token. The server recomputes the HMAC from the current session and compares with a constant-time function (`hmac.compare_digest`, `crypto.timingSafeEqual`). Read the token from the header or form field, never from the cookie alone, and reject malformed tokens (wrong component count, encoding, or length) before comparing.
+
+### JavaScript clients and token attachment
+
+- Attach the token only to your own trusted endpoints. Do not set it as a global header default or by patching `XMLHttpRequest.prototype.open`; unrelated cross-origin requests would leak it, and CORS preflight does not keep a manually attached header secret from a destination that allows it. Check the resolved request URL, not just the method or an assumed `baseURL`.
+- Prefer the framework or HTTP client's maintained integration (Angular `HttpClient` XSRF support, Axios `withXSRFToken`) over hand-rolled interceptors.
+- Expose the synchronizer token to the client via a `<meta>` tag rendered with the template's attribute encoder. Never put tokens in URLs or logs.
+- Client-side handling never replaces server-side validation on every state-changing request.
 
 ### Custom header
 
@@ -245,6 +255,8 @@ These are framework-agnostic XSS sources to grep for in any frontend code:
 - Direct injection of user data into `<style>` blocks or inline `style="..."`
 
 Each has legitimate uses, but each needs explicit justification. Sanitization with DOMPurify is the safety net when user-supplied HTML is genuinely required (rich-text comments, markdown rendering).
+
+**Trusted Types.** Where supported, add `require-trusted-types-for 'script'` to the CSP so DOM XSS sinks (`innerHTML`, `eval`, `script.src`, ...) reject plain strings and only accept values created through a named policy; `trusted-types <name>` restricts which policies may exist. The policy itself must sanitize or validate; Trusted Types only forces every sink write through it. Polyfills reproduce the API but not the browser-level sink enforcement.
 
 ## postMessage / iframe communication
 
