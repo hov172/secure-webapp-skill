@@ -1,6 +1,6 @@
 {
   "fetch_errors": [],
-  "last_run": "2026-11-09T09:10:12.333885+00:00",
+  "last_run": "2026-11-09T20:37:05.027488+00:00",
   "sources": {
     "asvs_5_0": {
       "base_url": "https://raw.githubusercontent.com/OWASP/ASVS/master/5.0/en/",
@@ -130,7 +130,7 @@
           "sha256": "f0bc89eb98a60966ab985082fed75807ff8f39978ccabf28118fc5a08baab293"
         },
         "LLM_Prompt_Injection_Prevention_Cheat_Sheet.md": {
-          "sha256": "b70dea7fd522a6535315c7d3b0bc38be7fed915edf31392cf6f1d95137a76a7b"
+          "sha256": "0665203bd28cdc33d6f5289aa662039677f18a6365a8d99e65a02b31fc26c38b"
         },
         "Logging_Cheat_Sheet.md": {
           "sha256": "55ed0b4e9b2a68dba0f5a26c817a20760632d91b315aa42bb33ecfe36cc7195d"
